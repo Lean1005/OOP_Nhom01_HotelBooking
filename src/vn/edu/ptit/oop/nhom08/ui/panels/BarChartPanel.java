@@ -12,10 +12,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Random;
 
-/**
- * Panel hiển thị BarChart: Công suất phòng (%) theo từng loại phòng.
- * Đảm nhận bởi: Thành viên 9 - Lâm Sỹ Nguyên (N24DCAT052)
- */
 public class BarChartPanel extends JPanel {
     private DefaultCategoryDataset dataset;
     private JFreeChart chart;
@@ -59,19 +55,11 @@ public class BarChartPanel extends JPanel {
         renderer.setSeriesPaint(0, new Color(41, 128, 185)); // Màu xanh dương hiện đại
         renderer.setDrawBarOutline(false);
     }
-
-    /**
-     * Cập nhật động dữ liệu công suất phòng mới (dùng khi refresh hoặc có lượt đặt phòng mới)
-     */
     public void updateOccupancyData(double standard, double deluxe, double suite) {
         dataset.setValue(standard, "Công suất (%)", "Standard Room");
         dataset.setValue(deluxe, "Công suất (%)", "Deluxe Room");
         dataset.setValue(suite, "Công suất (%)", "Suite Room");
     }
-
-    /**
-     * Mô phỏng tạo ngẫu nhiên dữ liệu thực tế
-     */
     public void simulateRandomData() {
         Random rand = new Random();
         double standard = 50 + rand.nextDouble() * 45; // 50% - 95%
