@@ -1,324 +1,418 @@
 package vn.edu.ptit.oop.nhom08.ui.panels;
 
-import vn.edu.ptit.oop.nhom08.model.Booking;
-import vn.edu.ptit.oop.nhom08.model.Guest;
-import vn.edu.ptit.oop.nhom08.model.Invoice;
-import vn.edu.ptit.oop.nhom08.model.Room;
-import vn.edu.ptit.oop.nhom08.model.ServiceCharge;
-import vn.edu.ptit.oop.nhom08.model.ServiceType;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 
-import javax.swing.JPanel;
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
+import java.awt.*;
+import java.awt.event.*;
 import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.List;
-import java.util.Locale;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-/**
- * Panel vẽ tờ Hóa đơn GTGT (Hóa đơn đỏ) kèm hình ảnh dịch vụ và con dấu mộc đỏ.
- * Phụ trách: Nguyễn Lê An - MSSV: N24DCAT001 (Thành viên 8)
- */
 public class InvoicePaperPanel extends JPanel {
-
     private Invoice invoice;
-    private boolean paidStampVisible = true;
-
-    private static final Locale VI_LOCALE = Locale.forLanguageTag("vi-VN");
-    private static final NumberFormat CURRENCY_FMT = NumberFormat.getInstance(VI_LOCALE);
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-    public InvoicePaperPanel(Invoice invoice) {
-        this.invoice = invoice;
-        setPreferredSize(new Dimension(540, 680));
-        setBackground(new Color(255, 253, 248));
-    }
 
     public InvoicePaperPanel() {
-        this(null);
+        setBackground(new Color(228, 232, 238));
     }
 
     public void setInvoice(Invoice invoice) {
         this.invoice = invoice;
-        repaint();
-    }
-
-    public Invoice getInvoice() {
-        return invoice;
-    }
-
-    public void setPaidStampVisible(boolean visible) {
-        this.paidStampVisible = visible;
+        int extraServiceCount = (invoice != null) ? invoice.getServiceCharges().size() : 0;
+        int extraGuestLines = (invoice != null) ? Math.max(0, invoice.getBooking().getGuests().size() - 1) : 0;
+        int dynamicHeight = 700 + extraGuestLines * 18 + extraServiceCount * 42 + (extraServiceCount > 0 ? 115 : 0);
+        setPreferredSize(new Dimension(680, dynamicHeight));
+        revalidate();
         repaint();
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        if (invoice == null) return;
+
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        int w = getWidth();
-        int h = getHeight();
-        int margin = 20;
+        int panelW = getWidth();
+        int paperW = 640;
+        int paperX = Math.max(15, (panelW - paperW) / 2);
+        int paperY = 16;
+        int paperH = getPreferredSize().height - 32;
 
-        // 1. Vẽ khung viền đôi hóa đơn đỏ
-        g2.setColor(new Color(190, 30, 45));
-        g2.setStroke(new BasicStroke(2.2f));
-        g2.drawRect(margin, margin, w - margin * 2, h - margin * 2);
-        g2.setStroke(new BasicStroke(0.8f));
-        g2.drawRect(margin + 4, margin + 4, w - (margin + 4) * 2, h - (margin + 4) * 2);
+        g2.setColor(new Color(0, 0, 0, 35));
+        g2.fillRoundRect(paperX + 5, paperY + 6, paperW, paperH, 10, 10);
+        g2.setColor(new Color(255, 254, 250));
+        g2.fillRoundRect(paperX, paperY, paperW, paperH, 10, 10);
+        g2.setColor(new Color(180, 175, 165));
+        g2.setStroke(new BasicStroke(1.2f));
+        g2.drawRoundRect(paperX, paperY, paperW, paperH, 10, 10);
 
-        if (invoice == null || invoice.getBooking() == null) {
-            g2.setFont(new Font("SansSerif", Font.ITALIC, 14));
-            g2.drawString("Chưa có dữ liệu hóa đơn", w / 2 - 80, h / 2);
-            g2.dispose();
-            return;
-        }
+        g2.setColor(new Color(25, 55, 109));
+        g2.fillRoundRect(paperX, paperY, paperW, 10, 10, 10);
 
-        Booking booking = invoice.getBooking();
-        Room room = booking.getRoom();
-        Guest primaryGuest = booking.getPrimaryGuest();
+        int curY = paperY + 26;
+        int leftX = paperX + 28;
+        int rightX = paperX + paperW - 28;
 
-        int y = margin + 28;
-        int leftX = margin + 18;
-        int rightX = w - margin - 18;
+        drawHotelLogo(g2, leftX, curY);
+        g2.setColor(new Color(25, 55, 109));
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        g2.drawString("CÔNG TY TNHH " + Invoice.COMPANY_NAME, leftX + 58, curY + 18);
 
-        // 2. Tiêu đề Công ty & Hóa đơn GTGT
-        g2.setColor(new Color(180, 20, 35));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-        g2.drawString("CÔNG TY TNHH NHÓM8HOTELBOOKING", leftX, y);
+        g2.setColor(new Color(90, 95, 105));
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        g2.drawString("MST: 0108889999 - Đ/c: Học viện Công nghệ Bưu chính Viễn thông (PTIT)", leftX + 58, curY + 35);
+        g2.drawString("Hotline: 1900 8888 | Website: www.nhom8hotelbooking.vn", leftX + 58, curY + 50);
 
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        g2.setColor(new Color(90, 90, 90));
-        g2.drawString("MST: 0318889999  |  Đ/c: 97 Man Thiện, TP. Thủ Đức, TP.HCM", leftX, y + 16);
+        drawBarcode(g2, rightX - 115, curY + 4, invoice.getBooking().getBookingId());
 
-        y += 42;
-        g2.setColor(new Color(190, 20, 35));
-        g2.setFont(new Font("SansSerif", Font.BOLD, 18));
-        String title = "HÓA ĐƠN GIÁ TRỊ GIA TĂNG (CHECK-OUT)";
-        FontMetrics fmTitle = g2.getFontMetrics();
-        g2.drawString(title, (w - fmTitle.stringWidth(title)) / 2, y);
+        curY += 68;
+        g2.setColor(new Color(210, 215, 220));
+        g2.drawLine(leftX, curY, rightX, curY);
 
-        y += 18;
-        g2.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        curY += 28;
+        g2.setColor(new Color(185, 28, 28));
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 21));
+        String title = "HÓA ĐƠN THANH TOÁN DỊCH VỤ KHÁCH SẠN";
+        g2.drawString(title, paperX + (paperW - g2.getFontMetrics().stringWidth(title)) / 2, curY);
+
+        curY += 20;
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         g2.setColor(new Color(100, 100, 100));
-        String subTitle = "Mã HĐ: " + invoice.getInvoiceId() + "   |   Mã Đặt phòng: " + booking.getBookingId();
-        FontMetrics fmSub = g2.getFontMetrics();
-        g2.drawString(subTitle, (w - fmSub.stringWidth(subTitle)) / 2, y);
+        g2.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        String subTitle = "Số HĐ: " + invoice.getBooking().getBookingId() + "   |   Ngày lập: " + invoice.getIssuedAt().format(dtf);
+        g2.drawString(subTitle, paperX + (paperW - g2.getFontMetrics().stringWidth(subTitle)) / 2, curY);
 
-        // Đường kẻ phân cách
-        y += 12;
-        g2.setColor(new Color(220, 180, 180));
-        g2.drawLine(leftX, y, rightX, y);
+        curY += 16;
+        Booking b = invoice.getBooking();
+        List<Guest> guestList = b.getGuests();
+        int boxH = 88 + Math.max(0, guestList.size() - 1) * 18;
 
-        // 3. Thông tin khách hàng & phòng
-        y += 22;
+        g2.setColor(new Color(245, 247, 250));
+        g2.fillRoundRect(leftX, curY, paperW - 56, boxH, 8, 8);
+        g2.setColor(new Color(215, 220, 228));
+        g2.drawRoundRect(leftX, curY, paperW - 56, boxH, 8, 8);
+
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        Guest primary = b.getPrimaryGuest();
         g2.setColor(new Color(40, 40, 40));
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        g2.drawString("Khách đại diện:", leftX + 14, curY + 22);
+        g2.drawString("Số CCCD / ĐT:", leftX + 14, curY + 44);
+        g2.drawString("Chính sách giá:", leftX + 14, curY + 66);
 
-        String guestName = primaryGuest != null ? primaryGuest.getName() : "Khách lẻ";
-        String guestCccd = primaryGuest != null ? primaryGuest.getCccd() : "N/A";
-        String guestPhone = primaryGuest != null ? primaryGuest.getPhone() : "N/A";
-        int totalGuests = booking.getGuests() != null ? booking.getGuests().size() : 1;
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.drawString(primary.getName() + " (" + primary.getGender().getLabel() + ")", leftX + 112, curY + 22);
+        g2.drawString(primary.getCccd() + " - " + primary.getPhone(), leftX + 112, curY + 44);
+        g2.drawString(invoice.getAppliedPolicy().getPolicyName(), leftX + 112, curY + 66);
 
-        g2.drawString("Khách hàng đại diện: " + guestName + " (" + totalGuests + " khách)", leftX, y);
-        y += 18;
-        g2.drawString("CCCD: " + guestCccd + "     |     SĐT: " + guestPhone, leftX, y);
-        y += 18;
-        String roomInfo = room != null
-                ? ("Phòng " + room.getRoomNumber() + " - " + room.getRoomTypeName() + " (Tầng " + room.getFloor() + ")")
-                : "N/A";
-        g2.drawString("Thông tin phòng: " + roomInfo, leftX, y);
-        y += 18;
-        g2.drawString("Nhận phòng: " + booking.getCheckIn().format(DATE_FMT)
-                + "   |   Trả phòng: " + booking.getCheckOut().format(DATE_FMT)
-                + "   (" + booking.nights() + " đêm)", leftX, y);
-        y += 18;
-        String policyName = invoice.getPricingPolicy() != null
-                ? invoice.getPricingPolicy().getPolicyName()
-                : "Giá tiêu chuẩn";
-        g2.drawString("Chính sách giá áp dụng: " + policyName, leftX, y);
+        int midX = leftX + 320;
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        g2.drawString("Phòng lưu trú:", midX, curY + 22);
+        g2.drawString("Nhận - Trả:", midX, curY + 44);
+        g2.drawString("Số lượng khách:", midX, curY + 66);
 
-        // 4. Bảng chi tiết dịch vụ thanh toán
-        y += 16;
-        int tableTop = y;
-        int rowH = 24;
-        g2.setColor(new Color(245, 225, 225));
-        g2.fillRect(leftX, tableTop, rightX - leftX, rowH);
-        g2.setColor(new Color(180, 30, 45));
-        g2.drawRect(leftX, tableTop, rightX - leftX, rowH);
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.drawString("Phòng " + b.getRoom().getRoomNumber() + " (" + b.getRoom().getRoomTypeName() + ")", midX + 100, curY + 22);
+        g2.drawString(b.getCheckIn().format(df) + " -> " + b.getCheckOut().format(df), midX + 100, curY + 44);
+        g2.drawString(guestList.size() + " khách (" + b.nights() + " đêm)", midX + 100, curY + 66);
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-        g2.drawString("STT", leftX + 8, tableTop + 16);
-        g2.drawString("Hạng mục / Dịch vụ", leftX + 45, tableTop + 16);
-        g2.drawString("SL", rightX - 155, tableTop + 16);
-        g2.drawString("Thành tiền (VNĐ)", rightX - 110, tableTop + 16);
-
-        y = tableTop + rowH;
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        g2.setColor(new Color(30, 30, 30));
-
-        // Dòng 1: Tiền phòng
-        int stt = 1;
-        double roomCost = invoice.calculateRoomCost();
-        drawTableRow(g2, leftX, rightX, y, rowH, String.valueOf(stt++),
-                "Tiền phòng (" + booking.nights() + " đêm)",
-                String.valueOf(booking.nights()),
-                formatVnd(roomCost));
-        y += rowH;
-
-        // Các dòng phụ phí dịch vụ
-        List<ServiceCharge> charges = invoice.getServiceCharges();
-        if (charges != null) {
-            for (ServiceCharge sc : charges) {
-                drawTableRow(g2, leftX, rightX, y, rowH, String.valueOf(stt++),
-                        sc.getDescription(),
-                        String.valueOf(sc.getQuantity()),
-                        formatVnd(sc.getTotalAmount()));
-                y += rowH;
+        if (guestList.size() > 1) {
+            int gy = curY + 86;
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            g2.setColor(new Color(25, 55, 109));
+            g2.drawString("Khách ở cùng:", leftX + 14, gy);
+            g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            for (int i = 1; i < guestList.size(); i++) {
+                Guest acc = guestList.get(i);
+                g2.drawString(String.format("• %s (%s - CCCD: %s - SĐT: %s)",
+                        acc.getName(), acc.getGender().getLabel(), acc.getCccd(), acc.getPhone()), leftX + 112, gy);
+                gy += 18;
             }
         }
 
-        // 5. Dòng Tổng cộng thanh toán
-        g2.setColor(new Color(252, 238, 238));
-        g2.fillRect(leftX, y, rightX - leftX, rowH + 4);
-        g2.setColor(new Color(180, 30, 45));
-        g2.drawRect(leftX, y, rightX - leftX, rowH + 4);
+        curY += boxH + 16;
+        int tableW = paperW - 56;
+        g2.setColor(new Color(25, 55, 109));
+        g2.fillRoundRect(leftX, curY, tableW, 30, 6, 6);
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        g2.drawString("STT", leftX + 12, curY + 20);
+        g2.drawString("HÌNH", leftX + 48, curY + 20);
+        g2.drawString("NỘI DUNG HẠNG MỤC / DỊCH VỤ", leftX + 98, curY + 20);
+        g2.drawString("SL", leftX + 375, curY + 20);
+        g2.drawString("THÀNH TIỀN (VNĐ)", leftX + 455, curY + 20);
 
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-        g2.drawString("TỔNG CỘNG THANH TOÁN:", leftX + 12, y + 18);
-        String totalStr = formatVnd(invoice.calculateTotal()) + " đ";
-        FontMetrics fmTotal = g2.getFontMetrics();
-        g2.drawString(totalStr, rightX - fmTotal.stringWidth(totalStr) - 10, y + 18);
+        curY += 30;
+        NumberFormat vnd = NumberFormat.getNumberInstance(HotelBookingApp.VI_LOCALE);
 
-        y += rowH + 22;
+        drawTableRow(g2, leftX, curY, tableW, 1, null,
+                "Tiền thuê Phòng " + b.getRoom().getRoomNumber() + " (" + b.getRoom().getRoomTypeName() + " - " + guestList.size() + " khách)",
+                b.nights() + " đêm", vnd.format(invoice.getRoomCharge()) + " đ");
+        curY += 42;
 
-        // 6. Vẽ hình ảnh minh họa các dịch vụ đã sử dụng
-        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
-        g2.setColor(new Color(90, 90, 90));
-        g2.drawString("Dịch vụ đi kèm đã sử dụng:", leftX, y);
-        y += 10;
-        drawServiceBadges(g2, leftX, y, charges);
-
-        // 7. Vẽ con dấu mộc đỏ xoay nghiêng của CÔNG TY TNHH NHÓM8HOTELBOOKING
-        if (paidStampVisible) {
-            drawRedCompanyStamp(g2, rightX - 135, h - margin - 95);
+        List<ServiceCharge> charges = invoice.getServiceCharges();
+        int stt = 2;
+        for (ServiceCharge sc : charges) {
+            drawTableRow(g2, leftX, curY, tableW, stt++, sc.getType(),
+                    sc.getServiceName(), "01 gói", vnd.format(sc.getAmount()) + " đ");
+            curY += 42;
         }
 
+        if (!charges.isEmpty()) {
+            curY += 10;
+            g2.setColor(new Color(25, 55, 109));
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            g2.drawString("HÌNH ẢNH XÁC NHẬN DỊCH VỤ ĐÃ SỬ DỤNG:", leftX, curY + 14);
+            curY += 22;
+
+            int cardW = 136, cardH = 78, cardGap = 12, cardX = leftX;
+            for (ServiceCharge sc : charges) {
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(cardX, curY, cardW, cardH, 10, 10);
+                g2.setColor(sc.getType().getThemeColor());
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawRoundRect(cardX, curY, cardW, cardH, 10, 10);
+
+                drawServiceIllustration(g2, sc.getType(), cardX + (cardW - 36) / 2, curY + 6, 36);
+
+                g2.setColor(new Color(40, 40, 40));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                String label = sc.getType().getShortTitle();
+                g2.drawString(label, cardX + (cardW - g2.getFontMetrics().stringWidth(label)) / 2, curY + 56);
+
+                g2.setColor(new Color(185, 28, 28));
+                g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+                String priceStr = "+" + vnd.format(sc.getAmount()) + " đ";
+                g2.drawString(priceStr, cardX + (cardW - g2.getFontMetrics().stringWidth(priceStr)) / 2, curY + 71);
+
+                cardX += cardW + cardGap;
+            }
+            curY += cardH + 8;
+        }
+
+        curY += 12;
+        g2.setColor(new Color(250, 242, 242));
+        g2.fillRoundRect(leftX, curY, tableW, 66, 8, 8);
+        g2.setColor(new Color(220, 180, 180));
+        g2.drawRoundRect(leftX, curY, tableW, 66, 8, 8);
+
+        g2.setColor(new Color(70, 70, 70));
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.drawString("Cộng tiền phòng: " + vnd.format(invoice.getRoomCharge()) + " đ   |   Cộng phí dịch vụ: "
+                + vnd.format(invoice.getTotalServiceCharges()) + " đ", leftX + 14, curY + 24);
+
+        g2.setColor(new Color(185, 28, 28));
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        g2.drawString("TỔNG CỘNG THANH TOÁN:", leftX + 14, curY + 52);
+        String grandTotalStr = vnd.format(invoice.getGrandTotal()) + " VNĐ";
+        g2.drawString(grandTotalStr, rightX - g2.getFontMetrics().stringWidth(grandTotalStr) - 16, curY + 52);
+
+        curY += 86;
+        g2.setColor(new Color(60, 60, 60));
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        g2.drawString("KHÁCH HÀNG ĐẠI DIỆN", leftX + 35, curY);
+        g2.drawString("ĐẠI DIỆN NHÓM8HOTELBOOKING", rightX - 215, curY);
+
+        g2.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        g2.setColor(Color.GRAY);
+        g2.drawString("(Ký, ghi rõ họ tên)", leftX + 45, curY + 16);
+        g2.drawString("(Ký, đóng dấu mộc đỏ)", rightX - 182, curY + 16);
+
+        g2.setColor(new Color(30, 60, 140));
+        g2.setFont(new Font("Segoe Script", Font.ITALIC, 15));
+        g2.drawString(primary.getName(), leftX + 28, curY + 68);
+
+        drawRedCompanyStamp(g2, rightX - 195, curY + 8);
         g2.dispose();
     }
 
-    private void drawTableRow(Graphics2D g2, int leftX, int rightX, int y, int rowH,
-                              String stt, String desc, String qty, String amount) {
-        g2.setColor(new Color(210, 210, 210));
-        g2.drawRect(leftX, y, rightX - leftX, rowH);
-        g2.setColor(new Color(35, 35, 35));
-        g2.drawString(stt, leftX + 12, y + 16);
-        g2.drawString(desc, leftX + 45, y + 16);
-        g2.drawString(qty, rightX - 150, y + 16);
-        FontMetrics fm = g2.getFontMetrics();
-        g2.drawString(amount, rightX - fm.stringWidth(amount) - 10, y + 16);
+    private void drawTableRow(Graphics2D g2, int x, int y, int w, int stt, ServiceType type,
+                              String name, String qty, String amount) {
+        g2.setColor(stt % 2 == 0 ? new Color(249, 250, 252) : Color.WHITE);
+        g2.fillRect(x, y, w, 42);
+        g2.setColor(new Color(230, 232, 236));
+        g2.drawLine(x, y + 42, x + w, y + 42);
+
+        g2.setColor(Color.DARK_GRAY);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        g2.drawString(String.format("%02d", stt), x + 14, y + 26);
+
+        drawServiceIllustration(g2, type, x + 46, y + 5, 32);
+
+        g2.setColor(new Color(30, 35, 45));
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        g2.drawString(name, x + 98, y + 26);
+        g2.drawString(qty, x + 370, y + 26);
+
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        g2.drawString(amount, x + w - g2.getFontMetrics().stringWidth(amount) - 14, y + 26);
     }
 
-    private void drawServiceBadges(Graphics2D g2, int startX, int startY, List<ServiceCharge> charges) {
-        if (charges == null || charges.isEmpty()) {
-            g2.setFont(new Font("SansSerif", Font.ITALIC, 11));
-            g2.setColor(new Color(130, 130, 130));
-            g2.drawString("(Không phát sinh phụ phí dịch vụ)", startX, startY + 18);
-            return;
-        }
-        int x = startX;
-        int y = startY;
-        for (ServiceCharge sc : charges) {
-            ServiceType type = sc.getServiceType();
-            Color badgeColor = type != null ? type.getBadgeColor() : new Color(41, 128, 185);
-            String label = type != null ? type.getDisplayName() : sc.getDescription();
+    private void drawServiceIllustration(Graphics2D g2, ServiceType type, int x, int y, int size) {
+        Graphics2D g = (Graphics2D) g2.create();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            g2.setColor(new Color(badgeColor.getRed(), badgeColor.getGreen(), badgeColor.getBlue(), 35));
-            g2.fillRoundRect(x, y, 88, 54, 10, 10);
-            g2.setColor(badgeColor);
-            g2.setStroke(new BasicStroke(1.3f));
-            g2.drawRoundRect(x, y, 88, 54, 10, 10);
+        if (type == null) {
+            g.setColor(new Color(52, 152, 219, 35));
+            g.fillRoundRect(x, y, size, size, 8, 8);
+            g.setColor(new Color(41, 128, 185));
+            g.fillRoundRect(x + 4, y + size / 2, size - 8, size / 4, 4, 4);
+            g.fillRect(x + 4, y + size / 3, 4, size / 2);
+            g.setColor(new Color(236, 240, 241));
+            g.fillRoundRect(x + 9, y + size / 2 - 4, 8, 5, 3, 3);
+        } else {
+            Color c = type.getThemeColor();
+            g.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), 35));
+            g.fillRoundRect(x, y, size, size, 8, 8);
+            g.setColor(c);
+            g.setStroke(new BasicStroke(1.8f));
 
-            // Vẽ icon minh họa dịch vụ bằng Graphics2D
-            drawServiceIcon(g2, type, x + 32, y + 8, badgeColor);
-
-            g2.setFont(new Font("SansSerif", Font.BOLD, 10));
-            FontMetrics fm = g2.getFontMetrics();
-            int textW = fm.stringWidth(label);
-            g2.drawString(label, x + (88 - textW) / 2, y + 46);
-
-            x += 96;
-            if (x > getWidth() - 180) {
-                x = startX;
-                y += 60;
+            switch (type) {
+                case MINIBAR:
+                    int cx = x + size / 2;
+                    int[] px = {x + 7, x + size - 7, cx};
+                    int[] py = {y + 9, y + 9, y + size / 2 + 3};
+                    g.fillPolygon(px, py, 3);
+                    g.drawLine(cx, y + size / 2 + 2, cx, y + size - 6);
+                    g.drawLine(cx - 6, y + size - 6, cx + 6, y + size - 6);
+                    g.setColor(new Color(231, 76, 60));
+                    g.drawLine(cx + 1, y + 11, x + size - 6, y + 4);
+                    break;
+                case LAUNDRY:
+                    int mx = x + size / 2;
+                    g.drawArc(mx - 4, y + 4, 8, 6, 0, 180);
+                    int[] sx = {mx - 10, mx - 4, mx + 4, mx + 10, mx + 7, mx + 7, mx - 7, mx - 7};
+                    int[] sy = {y + 13, y + 9, y + 9, y + 13, y + 17, y + size - 5, y + size - 5, y + 17};
+                    g.fillPolygon(sx, sy, 8);
+                    g.setColor(Color.WHITE);
+                    g.fillOval(mx - 2, y + 15, 4, 4);
+                    break;
+                case BREAKFAST:
+                    g.fillRoundRect(x + 7, y + 13, size - 16, size - 19, 6, 6);
+                    g.drawOval(x + size - 13, y + 15, 6, 8);
+                    g.drawLine(x + 5, y + size - 5, x + size - 7, y + size - 5);
+                    g.drawArc(x + 10, y + 5, 4, 6, 45, 180);
+                    g.drawArc(x + 16, y + 5, 4, 6, 45, 180);
+                    break;
+                case SPA:
+                    int scx = x + size / 2;
+                    int scy = y + size / 2 + 2;
+                    g.fillOval(scx - 4, scy - 11, 8, 14);
+                    g.fillOval(scx - 11, scy - 7, 9, 11);
+                    g.fillOval(scx + 2, scy - 7, 9, 11);
+                    g.setColor(new Color(100, 100, 110));
+                    g.fillRoundRect(scx - 9, scy + 5, 18, 5, 4, 4);
+                    break;
             }
         }
+        g.dispose();
     }
 
-    private void drawServiceIcon(Graphics2D g2, ServiceType type, int x, int y, Color color) {
-        g2.setColor(color);
-        g2.setStroke(new BasicStroke(1.8f));
-        if (type == ServiceType.MINIBAR) {
-            // Hình ly nước Minibar
-            g2.drawPolygon(new int[]{x + 2, x + 22, x + 12}, new int[]{y + 2, y + 2, y + 14}, 3);
-            g2.drawLine(x + 12, y + 14, x + 12, y + 22);
-            g2.drawLine(x + 6, y + 22, x + 18, y + 22);
-        } else if (type == ServiceType.LAUNDRY) {
-            // Hình máy giặt
-            g2.drawRoundRect(x + 3, y + 2, 18, 20, 4, 4);
-            g2.drawOval(x + 7, y + 7, 10, 10);
-        } else if (type == ServiceType.BREAKFAST) {
-            // Hình tách cà phê / đĩa ăn sáng
-            g2.drawArc(x + 3, y + 6, 16, 12, 180, 180);
-            g2.drawLine(x + 3, y + 12, x + 19, y + 12);
-            g2.drawLine(x + 2, y + 20, x + 22, y + 20);
-        } else {
-            // Hình ngôi sao / hoa Spa
-            g2.drawOval(x + 4, y + 4, 16, 16);
-            g2.fillOval(x + 9, y + 9, 6, 6);
+    private void drawRedCompanyStamp(Graphics2D g2, int x, int y) {
+        Graphics2D g = (Graphics2D) g2.create();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        AffineTransform old = g.getTransform();
+        g.rotate(Math.toRadians(-11), x + 65, y + 60);
+
+        Color stampRed = new Color(210, 22, 22, 205);
+        g.setColor(stampRed);
+
+        int d = 116;
+        g.setStroke(new BasicStroke(3.2f));
+        g.drawOval(x, y, d, d);
+        g.setStroke(new BasicStroke(1.2f));
+        g.drawOval(x + 6, y + 6, d - 12, d - 12);
+        g.drawOval(x + 26, y + 26, d - 52, d - 52);
+
+        g.setFont(new Font("Segoe UI", Font.BOLD, 9));
+        String topText = "CÔNG TY TNHH";
+        g.drawString(topText, x + (d - g.getFontMetrics().stringWidth(topText)) / 2, y + 19);
+
+        String botText = "M.S.D.N: 0108889999";
+        g.drawString(botText, x + (d - g.getFontMetrics().stringWidth(botText)) / 2, y + d - 11);
+
+        g.setFont(new Font("Segoe UI Symbol", Font.BOLD, 12));
+        g.drawString("★", x + 10, y + d / 2 + 4);
+        g.drawString("★", x + d - 21, y + d / 2 + 4);
+
+        g.setColor(new Color(255, 250, 250, 235));
+        g.fillRoundRect(x + 4, y + d / 2 - 14, d - 8, 28, 6, 6);
+        g.setColor(stampRed);
+        g.setStroke(new BasicStroke(1.8f));
+        g.drawRoundRect(x + 4, y + d / 2 - 14, d - 8, 28, 6, 6);
+
+        g.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        String centerName = Invoice.COMPANY_NAME;
+        g.drawString(centerName, x + (d - g.getFontMetrics().stringWidth(centerName)) / 2, y + d / 2 - 1);
+
+        g.setFont(new Font("Segoe UI", Font.BOLD, 9));
+        String paidLabel = "ĐÃ THU TIỀN";
+        g.drawString(paidLabel, x + (d - g.getFontMetrics().stringWidth(paidLabel)) / 2, y + d / 2 + 11);
+
+        g.setTransform(old);
+
+        g.setColor(new Color(20, 50, 140, 210));
+        g.setFont(new Font("Segoe Script", Font.BOLD | Font.ITALIC, 15));
+        g.drawString("Nhóm 8 Hotel", x + 15, y + d + 6);
+
+        g.dispose();
+    }
+
+    private void drawHotelLogo(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(25, 55, 109));
+        g2.fillRoundRect(x, y + 4, 46, 46, 12, 12);
+        g2.setColor(new Color(241, 196, 15));
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        g2.drawString("N8", x + 8, y + 35);
+    }
+
+    private void drawBarcode(Graphics2D g2, int x, int y, String code) {
+        g2.setColor(Color.BLACK);
+        int curX = x;
+        for (int i = 0; i < 24; i++) {
+            int barW = (i % 3 == 0) ? 3 : 1;
+            g2.fillRect(curX, y, barW, 28);
+            curX += barW + ((i % 2 == 0) ? 2 : 3);
         }
-    }
-
-    private void drawRedCompanyStamp(Graphics2D g2, int centerX, int centerY) {
-        AffineTransform old = g2.getTransform();
-        g2.rotate(Math.toRadians(-14), centerX, centerY);
-
-        Color stampRed = new Color(210, 25, 40, 195);
-        g2.setColor(stampRed);
-        g2.setStroke(new BasicStroke(2.5f));
-        g2.drawOval(centerX - 68, centerY - 42, 136, 84);
-        g2.setStroke(new BasicStroke(1.0f));
-        g2.drawOval(centerX - 63, centerY - 37, 126, 74);
-
-        g2.setFont(new Font("SansSerif", Font.BOLD, 9));
-        String topText = "CÔNG TY TNHH NHÓM8HOTELBOOKING";
-        FontMetrics fmTop = g2.getFontMetrics();
-        g2.drawString(topText, centerX - fmTop.stringWidth(topText) / 2, centerY - 12);
-
-        g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-        String midText = "ĐÃ THU TIỀN";
-        FontMetrics fmMid = g2.getFontMetrics();
-        g2.drawString(midText, centerX - fmMid.stringWidth(midText) / 2, centerY + 6);
-
-        g2.setFont(new Font("SansSerif", Font.ITALIC, 9));
-        String botText = "CHECKED OUT";
-        FontMetrics fmBot = g2.getFontMetrics();
-        g2.drawString(botText, centerX - fmBot.stringWidth(botText) / 2, centerY + 22);
-
-        g2.setTransform(old);
-    }
-
-    private String formatVnd(double amount) {
-        return CURRENCY_FMT.format(Math.round(amount));
+        g2.setFont(new Font("Consolas", Font.PLAIN, 10));
+        g2.drawString("* " + code + " *", x + 12, y + 40);
     }
 }
