@@ -1,4 +1,4 @@
-package vn.edu.ptit.oop.nhom08.ui;
+package vn.edu.ptit.oop.nhom01.ui;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -29,15 +29,15 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import vn.edu.ptit.oop.nhom08.*;
-import vn.edu.ptit.oop.nhom08.common.*;
-import vn.edu.ptit.oop.nhom08.exception.*;
-import vn.edu.ptit.oop.nhom08.model.*;
-import vn.edu.ptit.oop.nhom08.repository.*;
-import vn.edu.ptit.oop.nhom08.service.*;
-import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
-import vn.edu.ptit.oop.nhom08.ui.panels.*;
-import vn.edu.ptit.oop.nhom08.util.*;
+import vn.edu.ptit.oop.nhom01.*;
+import vn.edu.ptit.oop.nhom01.common.*;
+import vn.edu.ptit.oop.nhom01.exception.*;
+import vn.edu.ptit.oop.nhom01.model.*;
+import vn.edu.ptit.oop.nhom01.repository.*;
+import vn.edu.ptit.oop.nhom01.service.*;
+import vn.edu.ptit.oop.nhom01.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom01.ui.panels.*;
+import vn.edu.ptit.oop.nhom01.util.*;
 
 public class StartScreen extends JFrame {
     private final UserService userService = new UserService();
@@ -57,7 +57,7 @@ public class StartScreen extends JFrame {
         	@Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                ImageIcon imageIcon = new ImageIcon(getClass().getResource("OOP_Nhom08_HotelBookingupdate\\image\\Screenshot 2026-10-20 003409.png"));
+                ImageIcon imageIcon = new ImageIcon(getClass().getResource("OOP_nhom01_HotelBookingupdate\\image\\Screenshot 2026-10-20 003409.png"));
                 g.drawImage(imageIcon.getImage(), 0, 0, getWidth(), getHeight(), this);
             }
         };
@@ -98,4 +98,4 @@ public class StartScreen extends JFrame {
 =======
 }
 
->>>>>>> 95c9649660e2a9ae5be9107259673805ca9a9b42:src/vn/edu/ptit/oop/nhom08/ui/StartScreen.java
+>>>>>>> 95c9649660e2a9ae5be9107259673805ca9a9b42:src/vn/edu/ptit/oop/nhom01/ui/StartScreen.java
