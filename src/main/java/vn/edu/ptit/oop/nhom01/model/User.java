@@ -1,4 +1,4 @@
-package vn.edu.ptit.oop.nhom08.model;
+package vn.edu.ptit.oop.nhom01.model;
 
 public class User {
     private String username;
