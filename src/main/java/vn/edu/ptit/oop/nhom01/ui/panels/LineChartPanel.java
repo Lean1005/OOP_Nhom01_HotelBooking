@@ -1,4 +1,4 @@
-package vn.edu.ptit.oop.nhom08.ui.panels;
+package vn.edu.ptit.oop.nhom01.ui.panels;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
