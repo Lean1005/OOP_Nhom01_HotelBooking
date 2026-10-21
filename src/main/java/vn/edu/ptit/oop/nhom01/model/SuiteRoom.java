@@ -1,39 +1,59 @@
 package vn.edu.ptit.oop.nhom08.model;
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 public class SuiteRoom extends Room {
-    private boolean hasJacuzzi;
-
-    public SuiteRoom(String roomNumber, int floor, boolean hasJacuzzi) {
-        super(roomNumber, floor);
+    private final boolean hasJacuzzi;
+    public SuiteRoom(String roomNumber, int floor, RoomStatus status, boolean hasJacuzzi) {
+        super(roomNumber, floor, status);
         this.hasJacuzzi = hasJacuzzi;
     }
-
-    public boolean isHasJacuzzi() {
-        return hasJacuzzi;
+    @Override public double getPricePerNight() { return 1_800_000; }
+    @Override public String getAmenities() {
+        return "Phòng khách VIP riêng, Giường King, Buffet sáng miễn phí"
+                + (hasJacuzzi ? ", Bể sục Jacuzzi" : "") + " (Tối đa 6 người)";
     }
-
-    public void setHasJacuzzi(boolean hasJacuzzi) {
-        this.hasJacuzzi = hasJacuzzi;
-    }
-
-    @Override
-    public double getPricePerNight() {
-        return 1800000;
-    }
-
-    @Override
-    public String getAmenities() {
-        return "Wifi, dieu hoa, TV, phong khach rieng, jacuzzi: "
-                + (hasJacuzzi ? "co" : "khong");
-    }
-
-    @Override
-    public String getRoomTypeName() {
-        return "Suite";
-    }
-
-    @Override
-    public int getMaxOccupancy() {
-        return 4;
-    }
+    @Override public String getRoomTypeName() { return "Suite"; }
+    @Override public int getMaxOccupancy() { return 6; }
 }

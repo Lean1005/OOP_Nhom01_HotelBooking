@@ -1,129 +1,102 @@
-package model;
+package vn.edu.ptit.oop.nhom08.model;
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-import exception.InvalidBookingDataException;
-
-/**
- * Đơn đặt phòng, hỗ trợ nhiều khách cùng lưu trú trong một phòng.
- *
- * Quy tắc dữ liệu (luôn đúng trong suốt vòng đời đối tượng):
- *  - ngày trả phòng phải sau ngày nhận phòng ít nhất 1 ngày;
- *  - có ít nhất 1 khách;
- *  - không có hai khách trùng CCCD.
- */
 public class Booking {
-
     private final String bookingId;
-    private final String roomNumber;
+    private final List<Guest> guests = new ArrayList<>();
+    private final Room room;
     private final LocalDate checkIn;
     private final LocalDate checkOut;
-    private final List<Guest> guests = new ArrayList<>();
+    private boolean checkedOut;
 
-    public Booking(String bookingId, String roomNumber, LocalDate checkIn, LocalDate checkOut,
-                   List<Guest> guests) throws InvalidBookingDataException {
-        if (bookingId == null || bookingId.trim().isEmpty()) {
-            throw new InvalidBookingDataException("Mã đặt phòng không được để trống.");
-        }
-        if (roomNumber == null || roomNumber.trim().isEmpty()) {
-            throw new InvalidBookingDataException("Số phòng không được để trống.");
-        }
-        if (checkIn == null || checkOut == null) {
-            throw new InvalidBookingDataException(
-                    "Ngày nhận phòng và ngày trả phòng không được để trống.");
-        }
-        if (!checkOut.isAfter(checkIn)) {
-            throw new InvalidBookingDataException(
-                    "Ngày trả phòng phải sau ngày nhận phòng ít nhất 1 ngày.");
-        }
-        if (guests == null || guests.isEmpty()) {
-            throw new InvalidBookingDataException("Đơn đặt phòng phải có ít nhất 1 khách.");
-        }
-
-        this.bookingId = bookingId.trim();
-        this.roomNumber = roomNumber.trim();
+    public Booking(String bookingId, List<Guest> guestList, Room room, LocalDate checkIn, LocalDate checkOut)
+            throws InvalidBookingDataException {
+        if (guestList == null || guestList.isEmpty())
+            throw new InvalidBookingDataException("Phải có ít nhất 1 khách hàng trong danh sách đặt phòng!");
+        if (room == null)
+            throw new InvalidBookingDataException("Phòng không được để trống!");
+        if (checkIn == null || checkOut == null || !checkOut.isAfter(checkIn))
+            throw new InvalidBookingDataException("Ngày Check-out phải sau ngày Check-in ít nhất 1 đêm!");
+        this.bookingId = bookingId;
+        this.guests.addAll(guestList);
+        this.room = room;
         this.checkIn = checkIn;
         this.checkOut = checkOut;
-
-        // Sao chép từng phần tử vào list nội bộ (sao chép phòng vệ): Booking không giữ
-        // tham chiếu tới list của bên ngoài, nên bên ngoài sửa list đó cũng không ảnh hưởng.
-        for (Guest guest : guests) {
-            checkCanAdd(guest);
-            this.guests.add(guest);
-        }
+        this.checkedOut = false;
     }
 
-    /** Thêm một khách vào đơn đặt phòng. */
-    public void addGuest(Guest guest) throws InvalidBookingDataException {
-        checkCanAdd(guest);
-        guests.add(guest);
+    public Guest getPrimaryGuest() {
+        return guests.get(0);
     }
 
-    /** Xóa một khách khỏi đơn; đơn luôn phải còn ít nhất 1 khách. */
-    public void removeGuest(Guest guest) throws InvalidBookingDataException {
-        if (!guests.contains(guest)) {
-            throw new InvalidBookingDataException("Khách này không có trong đơn đặt phòng.");
-        }
-        if (guests.size() == 1) {
-            throw new InvalidBookingDataException("Đơn đặt phòng phải còn ít nhất 1 khách.");
-        }
-        guests.remove(guest);
-    }
-
-    private void checkCanAdd(Guest guest) throws InvalidBookingDataException {
-        if (guest == null) {
-            throw new InvalidBookingDataException("Khách không được để trống.");
-        }
-        if (guests.contains(guest)) { // Guest.equals so sánh theo CCCD
-            throw new InvalidBookingDataException(
-                    "Khách có CCCD " + guest.getCccd() + " đã có trong đơn đặt phòng.");
-        }
-    }
-
-    /**
-     * Trả về danh sách khách ở dạng CHỈ ĐỌC.
-     *
-     * Không trả thẳng biến guests vì lớp bên ngoài có thể tự ý thêm hoặc xóa phần tử,
-     * làm hỏng dữ liệu nội bộ của Booking (xóa hết khách, thêm khách trùng CCCD...).
-     * Muốn thay đổi danh sách phải đi qua addGuest()/removeGuest() để được kiểm tra.
-     * Gọi add()/remove() trên list trả về sẽ ném UnsupportedOperationException.
-     */
     public List<Guest> getGuests() {
         return Collections.unmodifiableList(guests);
     }
 
-    public int getGuestCount() {
-        return guests.size();
+    public String getGuestsSummary() {
+        if (guests.size() == 1) {
+            Guest g = guests.get(0);
+            return g.getName() + " (" + g.getGender().getLabel() + ")";
+        }
+        return getPrimaryGuest().getName() + " (+" + (guests.size() - 1) + " người đi cùng)";
     }
 
-    /** Số đêm lưu trú = số ngày giữa ngày nhận và ngày trả phòng. */
-    public int nights() {
-        return (int) ChronoUnit.DAYS.between(checkIn, checkOut);
+    public String getAllGendersSummary() {
+        return guests.stream().map(g -> g.getGender().getLabel()).collect(Collectors.joining(", "));
     }
 
-    public String getBookingId() {
-        return bookingId;
+    public long nights() { return ChronoUnit.DAYS.between(checkIn, checkOut); }
+    public double totalCost() { return nights() * room.getPricePerNight(); }
+    public double totalCost(PricingPolicy policy) {
+        return policy != null ? policy.calculatePrice(room, nights()) : totalCost();
     }
 
-    public String getRoomNumber() {
-        return roomNumber;
-    }
-
-    public LocalDate getCheckIn() {
-        return checkIn;
-    }
-
-    public LocalDate getCheckOut() {
-        return checkOut;
-    }
-
-    @Override
-    public String toString() {
-        return "Booking{" + bookingId + ", phòng " + roomNumber + ", " + checkIn + " → " + checkOut
-                + " (" + nights() + " đêm), " + guests.size() + " khách}";
-    }
+    public String getBookingId() { return bookingId; }
+    public Room getRoom() { return room; }
+    public LocalDate getCheckIn() { return checkIn; }
+    public LocalDate getCheckOut() { return checkOut; }
+    public boolean isCheckedOut() { return checkedOut; }
+    public void setCheckedOut(boolean checkedOut) { this.checkedOut = checkedOut; }
 }

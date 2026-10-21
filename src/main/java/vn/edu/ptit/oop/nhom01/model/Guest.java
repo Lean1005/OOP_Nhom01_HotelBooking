@@ -1,112 +1,89 @@
-package model;
+package vn.edu.ptit.oop.nhom08.model;
 
-import java.util.Objects;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.List;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-import exception.InvalidBookingDataException;
-
-/**
- * Khách lưu trú.
- *
- * Lớp bất biến (immutable): dữ liệu được kiểm tra chặt chẽ ngay khi khởi tạo,
- * nếu sai định dạng sẽ ném InvalidBookingDataException. Nhờ vậy một đối tượng
- * Guest đã tạo ra thì luôn hợp lệ.
- */
 public class Guest {
+    private String cccd;
+    private String name;
+    private Gender gender;
+    private String phone;
 
-    // CCCD: 9–12 chữ số
-    private static final Pattern CCCD_PATTERN = Pattern.compile("[0-9]{9,12}");
-
-    // SĐT: đúng 10 chữ số, bắt đầu bằng số 0
-    private static final Pattern PHONE_PATTERN = Pattern.compile("0[0-9]{9}");
-
-    // Họ tên: chỉ gồm chữ cái (kể cả có dấu tiếng Việt), các từ cách nhau 1 khoảng trắng
-    private static final Pattern NAME_PATTERN =
-            Pattern.compile("[\\p{L}\\p{M}]+( [\\p{L}\\p{M}]+)*");
-    private static final int NAME_MIN_LENGTH = 2;
-    private static final int NAME_MAX_LENGTH = 50;
-
-    private final String fullName;
-    private final String cccd;
-    private final String phone;
-    private final Gender gender;
-
-    public Guest(String fullName, String cccd, String phone, Gender gender)
-            throws InvalidBookingDataException {
-        this.fullName = validateFullName(fullName);
-        this.cccd = validateCccd(cccd);
-        this.phone = validatePhone(phone);
-        if (gender == null) {
-            throw new InvalidBookingDataException("Giới tính không được để trống.");
-        }
-        this.gender = gender;
+    public Guest(String cccd, String name, Gender gender, String phone) throws InvalidBookingDataException {
+        setCccd(cccd);
+        setName(name);
+        setGender(gender);
+        setPhone(phone);
     }
 
-    private static String validateFullName(String fullName) throws InvalidBookingDataException {
-        if (fullName == null || fullName.trim().isEmpty()) {
-            throw new InvalidBookingDataException("Họ tên không được để trống.");
-        }
-        // Chuẩn hoá: bỏ khoảng trắng đầu/cuối, gộp nhiều khoảng trắng liên tiếp thành một
-        String normalized = fullName.trim().replaceAll("\\s+", " ");
-        if (normalized.length() < NAME_MIN_LENGTH
-                || normalized.length() > NAME_MAX_LENGTH
-                || !NAME_PATTERN.matcher(normalized).matches()) {
-            throw new InvalidBookingDataException("Họ tên không hợp lệ: chỉ gồm chữ cái và khoảng trắng, dài "
-                    + NAME_MIN_LENGTH + "–" + NAME_MAX_LENGTH + " ký tự.");
-        }
-        return normalized;
+    public String getCccd() { return cccd; }
+    public void setCccd(String cccd) throws InvalidBookingDataException {
+        if (cccd == null || !cccd.trim().matches("\\d{9,12}"))
+            throw new InvalidBookingDataException("Số CCCD của khách '" + (name != null ? name : "") + "' phải gồm từ 9 đến 12 chữ số!");
+        this.cccd = cccd.trim();
     }
 
-    private static String validateCccd(String cccd) throws InvalidBookingDataException {
-        if (cccd == null || !CCCD_PATTERN.matcher(cccd).matches()) {
-            throw new InvalidBookingDataException("CCCD không hợp lệ: phải gồm 9–12 chữ số.");
-        }
-        return cccd;
+    public String getName() { return name; }
+    public void setName(String name) throws InvalidBookingDataException {
+        if (name == null || name.trim().length() < 2)
+            throw new InvalidBookingDataException("Họ tên khách hàng không được để trống (tối thiểu 2 ký tự)!");
+        this.name = name.trim();
     }
 
-    private static String validatePhone(String phone) throws InvalidBookingDataException {
-        if (phone == null || !PHONE_PATTERN.matcher(phone).matches()) {
-            throw new InvalidBookingDataException(
-                    "Số điện thoại không hợp lệ: phải gồm 10 chữ số và bắt đầu bằng số 0.");
-        }
-        return phone;
+    public Gender getGender() { return gender; }
+    public void setGender(Gender gender) {
+        this.gender = (gender == null) ? Gender.NAM : gender;
     }
 
-    public String getFullName() {
-        return fullName;
-    }
-
-    public String getCccd() {
-        return cccd;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public Gender getGender() {
-        return gender;
-    }
-
-    /** Hai khách được coi là cùng một người nếu trùng CCCD. */
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof Guest)) {
-            return false;
-        }
-        return cccd.equals(((Guest) o).cccd);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(cccd);
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) throws InvalidBookingDataException {
+        if (phone == null || !phone.trim().matches("0\\d{9}"))
+            throw new InvalidBookingDataException("Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0!");
+        this.phone = phone.trim();
     }
 
     @Override
     public String toString() {
-        return fullName + " (CCCD: " + cccd + ", SĐT: " + phone + ", " + gender + ")";
+        return String.format("%s (%s - CCCD: %s - SĐT: %s)", name, gender.getLabel(), cccd, phone);
     }
 }

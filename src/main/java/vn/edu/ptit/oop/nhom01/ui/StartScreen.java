@@ -93,4 +93,9 @@ public class StartScreen extends JFrame {
             new MainWindow(loggedInUser, userService).setVisible(true);
         }
     }
+<<<<<<< HEAD:src/main/java/vn/edu/ptit/oop/nhom01/ui/StartScreen.java
 }
+=======
+}
+
+>>>>>>> 95c9649660e2a9ae5be9107259673805ca9a9b42:src/vn/edu/ptit/oop/nhom08/ui/StartScreen.java
