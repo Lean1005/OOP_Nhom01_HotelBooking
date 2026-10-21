@@ -1,10 +1,10 @@
-package vn.edu.ptit.oop.nhom08.ui;
+package vn.edu.ptit.oop.nhom01.ui;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.StandardChartTheme;
-import vn.edu.ptit.oop.nhom08.service.BookingService;
-import vn.edu.ptit.oop.nhom08.ui.panels.BarChartPanel;
-import vn.edu.ptit.oop.nhom08.ui.panels.LineChartPanel;
+import vn.edu.ptit.oop.nhom01.service.BookingService;
+import vn.edu.ptit.oop.nhom01.ui.panels.BarChartPanel;
+import vn.edu.ptit.oop.nhom01.ui.panels.LineChartPanel;
 
 import javax.swing.*;
 import java.awt.*;
