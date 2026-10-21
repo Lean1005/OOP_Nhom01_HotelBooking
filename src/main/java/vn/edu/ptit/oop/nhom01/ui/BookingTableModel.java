@@ -1,10 +1,10 @@
-package vn.edu.ptit.oop.nhom08.ui;
+package vn.edu.ptit.oop.nhom01.ui;
 
 import javax.swing.table.AbstractTableModel;
-import vn.edu.ptit.oop.nhom08.HotelBookingApp;
-import vn.edu.ptit.oop.nhom08.model.Booking;
-import vn.edu.ptit.oop.nhom08.model.Guest;
-import vn.edu.ptit.oop.nhom08.service.BookingService;
+import vn.edu.ptit.oop.nhom01.HotelBookingApp;
+import vn.edu.ptit.oop.nhom01.model.Booking;
+import vn.edu.ptit.oop.nhom01.model.Guest;
+import vn.edu.ptit.oop.nhom01.service.BookingService;
 
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
