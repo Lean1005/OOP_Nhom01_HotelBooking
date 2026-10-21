@@ -1,4 +1,4 @@
-package vn.edu.ptit.oop.nhom08.common;
+package vn.edu.ptit.oop.nhom01.common;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
