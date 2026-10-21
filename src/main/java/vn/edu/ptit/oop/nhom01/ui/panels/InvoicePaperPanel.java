@@ -98,7 +98,7 @@ public class InvoicePaperPanel extends JPanel {
         g2.setColor(new Color(90, 95, 105));
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         g2.drawString("MST: 0108889999 - Đ/c: Học viện Công nghệ Bưu chính Viễn thông (PTIT)", leftX + 58, curY + 35);
-        g2.drawString("Hotline: 1900 8888 | Website: www.nhom8hotelbooking.vn", leftX + 58, curY + 50);
+        g2.drawString("Hotline: 01234 56789 | Website: www.nhom1hotelbooking.vn", leftX + 58, curY + 50);
 
         drawBarcode(g2, rightX - 115, curY + 4, invoice.getBooking().getBookingId());
 
