@@ -248,7 +248,7 @@ public class InvoicePaperPanel extends JPanel {
         g2.setColor(new Color(60, 60, 60));
         g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
         g2.drawString("KHÁCH HÀNG ĐẠI DIỆN", leftX + 35, curY);
-        g2.drawString("ĐẠI DIỆN NHÓM8HOTELBOOKING", rightX - 215, curY);
+        g2.drawString("ĐẠI DIỆN NHÓM 1 HOTEL BOOKING", rightX - 215, curY);
 
         g2.setFont(new Font("Segoe UI", Font.ITALIC, 11));
         g2.setColor(Color.GRAY);
@@ -391,7 +391,7 @@ public class InvoicePaperPanel extends JPanel {
 
         g.setColor(new Color(20, 50, 140, 210));
         g.setFont(new Font("Segoe Script", Font.BOLD | Font.ITALIC, 15));
-        g.drawString("Nhóm 8 Hotel", x + 15, y + d + 6);
+        g.drawString("Nhóm 1 Hotel", x + 15, y + d + 6);
 
         g.dispose();
     }
@@ -401,7 +401,7 @@ public class InvoicePaperPanel extends JPanel {
         g2.fillRoundRect(x, y + 4, 46, 46, 12, 12);
         g2.setColor(new Color(241, 196, 15));
         g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        g2.drawString("N8", x + 8, y + 35);
+        g2.drawString("N1", x + 8, y + 35);
     }
 
     private void drawBarcode(Graphics2D g2, int x, int y, String code) {
