@@ -30,16 +30,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import vn.edu.ptit.oop.nhom08.*;
-import vn.edu.ptit.oop.nhom08.common.*;
-import vn.edu.ptit.oop.nhom08.exception.*;
-import vn.edu.ptit.oop.nhom08.model.*;
-import vn.edu.ptit.oop.nhom08.repository.*;
-import vn.edu.ptit.oop.nhom08.service.*;
-import vn.edu.ptit.oop.nhom08.ui.*;
-import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
-import vn.edu.ptit.oop.nhom08.ui.panels.*;
-import vn.edu.ptit.oop.nhom08.util.*;
 
 public abstract class BaseWindow extends JFrame {
     protected JMenuBar menuBar;

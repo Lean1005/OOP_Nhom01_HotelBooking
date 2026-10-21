@@ -38,7 +38,6 @@ import vn.edu.ptit.oop.nhom08.service.*;
 import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
 import vn.edu.ptit.oop.nhom08.ui.panels.*;
 import vn.edu.ptit.oop.nhom08.util.*;
-import org.eclipse.wb.swing.FocusTraversalOnArray;
 
 public class StartScreen extends JFrame {
     private final UserService userService = new UserService();
@@ -47,58 +46,46 @@ public class StartScreen extends JFrame {
 
     public StartScreen() {
         
-        super("Nhóm8HotelBooking - Đăng nhập & Phân quyền Hệ thống");
+        super("Nhóm8HotelBooking - Đăng nhập");
         setTitle("Hotel Booking- LOGIN ");
         setSize(495, 340);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setLayout(new BorderLayout());
 
-        JPanel panel = new JPanel(new GridLayout(3, 1, 15, 15));
+        JPanel panel = new JPanel() {
+        	@Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                ImageIcon imageIcon = new ImageIcon(getClass().getResource("OOP_Nhom08_HotelBookingupdate\\image\\Screenshot 2026-10-20 003409.png"));
+                g.drawImage(imageIcon.getImage(), 0, 0, getWidth(), getHeight(), this);
+            }
+        };
         panel.setBorder(new EmptyBorder(30, 40, 30, 40));
         panel.setBackground(new Color(245, 247, 250));
 
-        JLabel lblTitle = new JLabel("HỆ THỐNG ĐẶT PHÒNG KHÁCH SẠN", JLabel.CENTER);
+        JLabel lblTitle = new JLabel("CHÀO MỪNG BẠN ĐẾN VỚI HOTEL BOOKING", SwingConstants.CENTER);
+        lblTitle.setToolTipText("");
+        lblTitle.setBounds(40, 23, 401, 90);
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblTitle.setForeground(new Color(25, 55, 109));
-
-        JButton btnCustomer = new JButton("Khách hàng");
-        btnCustomer.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btnCustomer.setContentAreaFilled(false); 
-        btnCustomer.setOpaque(true);
-        btnCustomer.setBackground(new Color(0, 128, 192));
-        btnCustomer.setForeground(new Color(255, 255, 255));
-        btnCustomer.addActionListener(e -> openCustomerAuthDialog());
                    
-        JButton btnStaff = new JButton("Quản trị viên");
+        JButton btnStaff = new JButton("BẮT ĐẦU");
+        btnStaff.setBounds(99, 173, 281, 71);
         btnStaff.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnStaff.setContentAreaFilled(false);
         btnStaff.setOpaque(true);
         btnStaff.setBackground(new Color(0, 128, 192));
         btnStaff.setForeground(new Color(255, 255, 255));
-        btnStaff.addActionListener(e -> openStaffLoginDialog());
-        
-
+        btnStaff.addActionListener(e -> openLoginDialog());
+        panel.setLayout(null);
         panel.add(lblTitle);
-        panel.add(btnCustomer);
         panel.add(btnStaff);
 
         getContentPane().add(panel, BorderLayout.CENTER);
-        setFocusTraversalPolicy(new FocusTraversalOnArray(new Component[]{getContentPane(), panel, lblTitle, btnCustomer, btnStaff}));
     }
-
-    private void openCustomerAuthDialog() {
-        CustomerAuthDialog dlg = new CustomerAuthDialog(this, userService);
-        dlg.setVisible(true);
-        if (dlg.isLoggedIn()) {
-            this.loggedInUser = dlg.getLoggedInUser();
-            dispose();
-            new MainWindow(loggedInUser, userService).setVisible(true);
-        }
-    }
-
-    private void openStaffLoginDialog() {
-        StaffLoginDialog dlg = new StaffLoginDialog(this, userService);
+    private void openLoginDialog() {
+        LoginDialog dlg = new LoginDialog(this, userService);
         dlg.setVisible(true);
         if (dlg.isLoggedIn()) {
             this.loggedInUser = dlg.getLoggedInUser();
@@ -107,4 +94,3 @@ public class StartScreen extends JFrame {
         }
     }
 }
-

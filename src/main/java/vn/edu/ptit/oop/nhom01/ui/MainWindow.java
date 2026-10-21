@@ -10,6 +10,18 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
+
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.AffineTransform;
@@ -30,21 +42,12 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import vn.edu.ptit.oop.nhom08.*;
-import vn.edu.ptit.oop.nhom08.common.*;
-import vn.edu.ptit.oop.nhom08.exception.*;
-import vn.edu.ptit.oop.nhom08.model.*;
-import vn.edu.ptit.oop.nhom08.repository.*;
-import vn.edu.ptit.oop.nhom08.service.*;
-import vn.edu.ptit.oop.nhom08.ui.*;
-import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
-import vn.edu.ptit.oop.nhom08.ui.panels.*;
-import vn.edu.ptit.oop.nhom08.util.*;
 
 public class MainWindow extends BaseWindow {
     private HotelRepository repository;
     private BookingService bookingService;
     private RoomMapPanel roomMapPanel;
+    private JScrollPane mapScrollPane; // Khai báo thành field của lớp để dễ refresh
     private RoomDetailPanel roomDetailPanel;
     private BookingTableModel bookingTableModel;
     private JTable bookingTable;
@@ -54,7 +57,7 @@ public class MainWindow extends BaseWindow {
 
     public MainWindow(User currentUser, UserService userService) {
         super("Nhóm8HotelBooking - Hệ thống Quản lý Đặt phòng Khách sạn [" 
-               + ": " + currentUser.getFullName() + "]", 1280, 780);
+                + ": " + currentUser.getFullName() + "]", 1280, 780);
         statusBar.setBounds(0, 699, 1266, 22);
         toolBar.setBounds(0, 0, 1266, 21);
         this.currentUser = currentUser;
@@ -63,15 +66,16 @@ public class MainWindow extends BaseWindow {
 
     @Override
     protected void initUI() {
+        // ĐÃ SỬA: Chuyển sang sử dụng SqlHotelRepository để kết nối trực tiếp với SQL Server
         repository = new InMemoryHotelRepository();
         bookingService = new BookingService(repository);
 
         setupToolbarAndMenus();
 
         roomMapPanel = new RoomMapPanel(repository.findAllRooms(), this::onRoomSelected);
-        JScrollPane mapScrollPane = new JScrollPane(roomMapPanel);
+        mapScrollPane = new JScrollPane(roomMapPanel);
         mapScrollPane.setBorder(BorderFactory.createTitledBorder(
-                "Sơ đồ Phòng Trực quan (Tự động co giãn khi Thêm Phòng / Thêm Tầng - Click chuột để chọn phòng)"));
+                "Sơ đồ Phòng Trực quan (Tự động co giãn khi Thêm Phòng / Tầng - Click chuột để chọn phòng)"));
         mapScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         mapScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
 
@@ -91,7 +95,7 @@ public class MainWindow extends BaseWindow {
         mainSplit.setResizeWeight(0.58);
         mainSplit.setDividerLocation(435);
 
-        add(mainSplit, BorderLayout.CENTER);
+        getContentPane().add(mainSplit, BorderLayout.CENTER);
 
         Room defaultRoom = repository.findRoomByNumber("402");
         if (defaultRoom == null && !repository.findAllRooms().isEmpty()) {
@@ -139,7 +143,6 @@ public class MainWindow extends BaseWindow {
         });
         toolBar.add(policyCombo);
 
-        // Menu File bổ sung Thêm Phòng & Thêm Tầng
         JMenuItem addRoomMenu = new JMenuItem("Thêm Phòng mới...");
         addRoomMenu.addActionListener(e -> openAddRoomOrFloorDialog(0));
         JMenuItem addFloorMenu = new JMenuItem("Thêm Tầng mới...");
@@ -185,12 +188,20 @@ public class MainWindow extends BaseWindow {
         });
         topBar.add(txtSearch);
 
-        JButton btnCheckOut = new JButton("Check-out & Lập Hóa đơn dòng đang chọn");
+        JButton btnCheckOut = new JButton("Check-out & Lập Hóa đơn cho khách");
+        btnCheckOut.setBackground(new Color(255, 128, 128));
         btnCheckOut.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnCheckOut.addActionListener(e -> openCheckOutDialog());
         topBar.add(btnCheckOut);
 
         panel.add(topBar, BorderLayout.NORTH);
+        
+        JButton btnCheckIn = new JButton("Check-in cho khách");
+        btnCheckIn.setBackground(new Color(46, 204, 113)); // Màu xanh lá nổi bật
+        btnCheckIn.setForeground(new Color(0, 0, 0));
+        btnCheckIn.addActionListener(e->performCheckIn());
+        btnCheckIn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        topBar.add(btnCheckIn);
         panel.add(new JScrollPane(bookingTable), BorderLayout.CENTER);
         return panel;
     }
@@ -215,11 +226,10 @@ public class MainWindow extends BaseWindow {
         dialog.setVisible(true);
         if (dialog.isChanged()) {
             Room newlyAdded = dialog.getLastAddedRoom();
+            refreshAllViews();
             if (newlyAdded != null) {
                 roomMapPanel.setSelectedRoom(newlyAdded);
             }
-            roomMapPanel.revalidate();
-            refreshAllViews();
             setStatus(dialog.getActionSummaryMessage());
         }
     }
@@ -228,6 +238,10 @@ public class MainWindow extends BaseWindow {
         Room selected = roomMapPanel.getSelectedRoom();
         if (selected == null) return;
         selected.setCleaningRequested(!selected.isCleaningRequested());
+        
+        // CẬP NHẬT NGAY LẬP TỨC XUỐNG SQL SERVER
+        repository.updateRoom(selected);
+        
         refreshAllViews();
         if (selected.isCleaningRequested()) {
             setStatus("Đã gửi YÊU CẦU DỌN PHÒNG cho Phòng " + selected.getRoomNumber());
@@ -246,23 +260,45 @@ public class MainWindow extends BaseWindow {
         }
         selected.setStatus(selected.getStatus() == RoomStatus.MAINTENANCE
                 ? RoomStatus.AVAILABLE : RoomStatus.MAINTENANCE);
+                
+        // CẬP NHẬT NGAY LẬP TỨC XUỐNG SQL SERVER
+        repository.updateRoom(selected);
+        
         refreshAllViews();
-    }
-
-    private void openBookingDialog(Room preselectedRoom) {
-        BookingDialog dialog = new BookingDialog(this, bookingService, preselectedRoom);
-        dialog.setVisible(true);
-        if (dialog.isConfirmed()) {
-            Booking created = dialog.getCreatedBooking();
-            roomMapPanel.setSelectedRoom(created.getRoom());
-            refreshAllViews();
-            setStatus("Đã đặt thành công phòng " + created.getRoom().getRoomNumber()
-                    + " cho " + created.getGuests().size() + " khách lưu trú!");
+        if (selected.getStatus() == RoomStatus.MAINTENANCE) {
+            setStatus("Đã chuyển Phòng " + selected.getRoomNumber() + " sang trạng thái BẢO TRÌ");
+        } else {
+            setStatus("Đã chuyển Phòng " + selected.getRoomNumber() + " sang trạng thái TRỐNG (sẵn sàng đón khách)");
         }
     }
-
+    private void openBookingDialog(Room preSelectedRoom) {
+        // Khởi tạo dialog đặt phòng với service và phòng đang chọn sẵn
+        BookingDialog dialog = new BookingDialog(this, bookingService, preSelectedRoom);
+        dialog.setVisible(true); // Chương trình sẽ đứng lại đây chờ người dùng thao tác xong
+        
+        // Sau khi dialog đóng lại, kiểm tra xem người dùng đã bấm xác nhận thành công chưa
+        if (dialog.isConfirmed()) {
+            // GỌI HÀM LÀM MỚI NGAY LẬP TỨC ĐỂ ĐẨY DỮ LIỆU LÊN GIAO DIỆN CHÍNH
+            refreshAllViews();
+            
+            // Tự động chọn lại đúng phòng vừa đặt để người dùng thấy ngay trạng thái mới
+            Booking newBooking = dialog.getCreatedBooking();
+            if (newBooking != null && newBooking.getRoom() != null) {
+                String bookedRoomNo = newBooking.getRoom().getRoomNumber();
+                Room freshRoom = repository.findRoomByNumber(bookedRoomNo);
+                if (freshRoom != null && roomMapPanel != null) {
+                    roomMapPanel.setSelectedRoom(freshRoom);
+                    updateRoomDetailView(freshRoom);
+                }
+            }
+            
+            setStatus("Đặt phòng thành công! Sơ đồ phòng và danh sách đã được cập nhật.");
+        }
+    }
+    
     private void openCheckOutDialog() {
         int viewRow = bookingTable.getSelectedRow();
+        
         if (viewRow < 0) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn một dòng đặt phòng trong bảng bên dưới để Check-out!",
                     "Chưa chọn đơn đặt phòng", JOptionPane.INFORMATION_MESSAGE);
@@ -270,9 +306,10 @@ public class MainWindow extends BaseWindow {
         }
         int modelRow = bookingTable.convertRowIndexToModel(viewRow);
         Booking selectedBooking = bookingTableModel.getBookingAt(modelRow);
+        String status = String.valueOf(bookingTable.getModel().getValueAt(modelRow, 11));
 
-        if (selectedBooking.isCheckedOut()) {
-            JOptionPane.showMessageDialog(this, "Đơn đặt phòng này đã được Check-out trước đó!",
+        if (selectedBooking.isCheckedOut()||"Đặt phòng thành công".equals(status)) {
+            JOptionPane.showMessageDialog(this, "Đơn đặt phòng này chưa thực hiện thủ tục check-in hoặc đã được Check-out trước đó!",
                     "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -280,10 +317,50 @@ public class MainWindow extends BaseWindow {
         InvoiceDialog dialog = new InvoiceDialog(this, selectedBooking, bookingService);
         dialog.setVisible(true);
         if (dialog.isPaid()) {
+            // ĐƯỢC THÊM: Đổi trạng thái phòng đối tượng cục bộ trong bộ nhớ ngay lập tức
+            if (selectedBooking.getRoom() != null) {
+                selectedBooking.getRoom().setStatus(RoomStatus.AVAILABLE);
+                selectedBooking.getRoom().setCleaningRequested(true);
+            }
+            
+            // Cập nhật lại toàn bộ giao diện ngay tức thì
             refreshAllViews();
+            
             setStatus("Đã Check-out thành công phòng " + selectedBooking.getRoom().getRoomNumber()
                     + " (Phòng đã tự động bật cờ Yêu cầu dọn phòng)");
         }
+    }
+    private void performCheckIn() {
+        int viewRow = bookingTable.getSelectedRow();
+        if (viewRow < 0) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn một dòng đặt phòng trong bảng để Check-in!",
+                    "Chưa chọn đơn", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int modelRow = bookingTable.convertRowIndexToModel(viewRow);
+        Booking selectedBooking = bookingTableModel.getBookingAt(modelRow);
+        
+        String status = String.valueOf(bookingTable.getModel().getValueAt(modelRow, 11));
+        if ("Đang lưu trú".equals(status) || selectedBooking.isCheckedOut()) {
+            JOptionPane.showMessageDialog(this, "Đơn này đã được Check-in hoặc đã hoàn tất trước đó!",
+                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Cập nhật trạng thái trong CSDL: 
+        // 1. PhieuDatPhong.trang_thai -> 'CHECKED_IN' (hoặc 'Đang lưu trú')
+        // 2. Phong.status -> 'OCCUPIED' (Đang có khách - chuyển sơ đồ sang màu đỏ)
+        repository.updateBookingStatus(selectedBooking, "Đang lưu trú");
+        
+        if (selectedBooking.getRoom() != null) {
+            selectedBooking.getRoom().setStatus(RoomStatus.OCCUPIED);
+            repository.updateRoom(selectedBooking.getRoom());
+        }
+
+        // Làm mới lại toàn bộ giao diện ngay lập tức
+        refreshAllViews();
+        
+        setStatus("Check-in thành công cho phòng " + selectedBooking.getRoom().getRoomNumber() + ". Phòng chuyển sang trạng thái Đang lưu trú.");
     }
 
     private void openRoomFilterDialog() {
@@ -294,6 +371,7 @@ public class MainWindow extends BaseWindow {
         dialog.setVisible(true);
     }
 
+   
     private void openChartWindow() {
         if (chartWindow == null || !chartWindow.isDisplayable()) {
             chartWindow = new ChartWindow(bookingService);
@@ -317,21 +395,59 @@ public class MainWindow extends BaseWindow {
         }
     }
 
+    /**
+     * Phương thức đồng bộ hóa và làm mới toàn bộ giao diện dựa trên dữ liệu mới nhất từ SQL Server
+     */
     private void refreshAllViews() {
+        // 1. Đọc lại danh sách phòng và đơn đặt mới nhất từ SQL Server
+        List<Room> latestRooms = repository.findAllRooms();
+        List<Booking> latestBookings = repository.findAllBookings();
+
+        // 2. Cập nhật dữ liệu trực tiếp vào sơ đồ phòng
+        roomMapPanel.setRooms(latestRooms);
+
+        // 3. Giữ nguyên phòng đang được chọn và cập nhật giao diện chi tiết bên phải
+        Room selected = roomMapPanel.getSelectedRoom();
+        if (selected != null) {
+            String selectedRoomNo = selected.getRoomNumber();
+            Room freshSelected = latestRooms.stream()
+                    .filter(r -> r.getRoomNumber().equalsIgnoreCase(selectedRoomNo))
+                    .findFirst().orElse(null);
+            if (freshSelected == null) {
+                freshSelected = repository.findRoomByNumber(selectedRoomNo);
+            }
+            if (freshSelected != null) {
+                roomMapPanel.setSelectedRoom(freshSelected);
+                updateRoomDetailView(freshSelected);
+            }
+        }
+
+        roomMapPanel.revalidate();
         roomMapPanel.repaint();
-        updateRoomDetailView(roomMapPanel.getSelectedRoom());
-        bookingTableModel.fireTableDataChanged();
+
+        // 4. Cập nhật lại bảng danh sách đặt phòng
+        bookingTableModel = new BookingTableModel(latestBookings, bookingService);
+        bookingTable.setModel(bookingTableModel);
+        
+        BookingStatusCellRenderer renderer = new BookingStatusCellRenderer();
+        for (int i = 0; i < bookingTable.getColumnCount(); i++) {
+            bookingTable.getColumnModel().getColumn(i).setCellRenderer(renderer);
+        }
+        TableRowSorter<BookingTableModel> sorter = new TableRowSorter<>(bookingTableModel);
+        bookingTable.setRowSorter(sorter);
+
+        // 5. Cập nhật biểu đồ nếu đang mở
         if (chartWindow != null && chartWindow.isDisplayable()) {
             chartWindow.refreshCharts();
         }
+        
         updateStatusBar();
     }
-
     private void updateStatusBar() {
         long floors = repository.findAllRooms().stream().map(Room::getFloor).distinct().count();
         long avail = repository.findAllRooms().stream().filter(r -> r.getStatus() == RoomStatus.AVAILABLE).count();
         long occ = repository.findAllRooms().stream().filter(r -> r.getStatus() == RoomStatus.OCCUPIED).count();
-        long needClean = repository.findAllRooms().stream().filter(Room::isCleaningRequested).count();
+        long needClean = repository.findAllRooms().stream().filter(r -> r.isCleaningRequested()).count();
         setStatus(String.format("Quy mô: %d tầng - %d phòng | Trống: %d | Đang có khách: %d | Cần dọn phòng: %d | Tổng đơn: %d | Chính sách: %s",
                 floors, repository.findAllRooms().size(), avail, occ, needClean,
                 repository.findAllBookings().size(), bookingService.getPricingPolicy().getPolicyName()));

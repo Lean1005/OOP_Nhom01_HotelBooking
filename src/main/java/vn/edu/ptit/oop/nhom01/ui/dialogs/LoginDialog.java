@@ -61,7 +61,7 @@ public class LoginDialog extends javax.swing.JDialog {
          	});
          p.add(btnHidePW);
          
-        JButton btnLogin = new JButton("Đăng nhập Quản trị");
+        JButton btnLogin = new JButton("Đăng nhập");
         btnLogin.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnLogin.addActionListener(e -> {
             try {
