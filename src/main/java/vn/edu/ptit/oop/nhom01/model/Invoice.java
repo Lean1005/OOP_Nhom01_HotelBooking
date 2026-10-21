@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class Invoice {
-    public static final String COMPANY_NAME = "NHÓM8HOTELBOOKING";
+    public static final String COMPANY_NAME = "NHÓM 1 HOTEL BOOKING";
     private final Booking booking;
     private final PricingPolicy appliedPolicy;
     private final List<ServiceCharge> serviceCharges = new ArrayList<>();
