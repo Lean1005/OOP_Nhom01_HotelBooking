@@ -1,10 +1,10 @@
-package vn.edu.ptit.oop.nhom08.model;
+package vn.edu.ptit.oop.nhom01.model;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import vn.edu.ptit.oop.nhom08.DBConnection;
+import vn.edu.ptit.oop.nhom01.DBConnection;
 
 public class UserService {
     private User currentUser;
