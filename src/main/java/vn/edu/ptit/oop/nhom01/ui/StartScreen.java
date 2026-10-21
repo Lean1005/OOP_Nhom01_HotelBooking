@@ -55,8 +55,11 @@ public class StartScreen extends JFrame {
         	@Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                ImageIcon imageIcon = new ImageIcon(getClass().getResource("OOP_nhom01_HotelBookingupdate\\image\\Screenshot 2026-10-20 003409.png"));
-                g.drawImage(imageIcon.getImage(), 0, 0, getWidth(), getHeight(), this);
+                java.net.URL imgUrl = getClass().getResource("/image/Screenshot 2026-10-20 003409.png");
+                if (imgUrl != null) {
+                    ImageIcon imageIcon = new ImageIcon(imgUrl);
+                    g.drawImage(imageIcon.getImage(), 0, 0, getWidth(), getHeight(), this);
+                }
             }
         };
         panel.setBorder(new EmptyBorder(30, 40, 30, 40));
