@@ -156,6 +156,9 @@ public class InMemoryHotelRepository implements HotelRepository {
     }
 
     @Override public void updateBookingStatus(Booking booking, String status) {
+        if (booking != null) {
+            booking.setStatus(status);
+        }
         int id = parseBookingId(booking.getBookingId());
         String sql = "UPDATE PhieuDatPhong SET trang_thai=? WHERE ma_dat_phong=?";
         
