@@ -1,226 +1,147 @@
 package vn.edu.ptit.oop.nhom08.ui.panels;
 
-import vn.edu.ptit.oop.nhom08.model.Room;
-import vn.edu.ptit.oop.nhom08.model.RoomStatus;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JToggleButton;
-import javax.swing.UIManager;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.List;
-import java.util.Locale;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-/** Hiển thị thông tin của phòng đang được chọn trên sơ đồ. */
 public class RoomDetailPanel extends JPanel {
-    private static final long serialVersionUID = 1L;
-    private final JLabel lblRoomNumber;
-    private final JLabel lblRoomType;
-    private final JLabel lblStatus;
-    private final JLabel lblPrice;
-    private final JLabel lblOccupancy;
-    private final JTextArea txtAmenities;
-    private final JTextArea txtGuests;
-    private final JToggleButton btnCleaning;
+    private final JLabel lblRoomNo = new JLabel("-");
+    private final JLabel lblType = new JLabel("-");
+    private final JLabel lblFloor = new JLabel("-");
+    private final JLabel lblStatus = new JLabel("-");
+    private final JLabel lblCleaning = new JLabel("-");
+    private final JLabel lblBasePrice = new JLabel("-");
+    private final JLabel lblPolicyPrice = new JLabel("-");
+    private final JTextArea txtAmenitiesAndGuests = new JTextArea(5, 20);
+    private final JButton btnToggleCleaning;
 
-    private Room currentRoom;
-    private RoomMapPanel mapPanel;
+    public RoomDetailPanel(Runnable onBook, Runnable onToggleCleaning, Runnable onMaint) {
+        setLayout(new BorderLayout(6, 6));
+        setBorder(BorderFactory.createTitledBorder("Chi tiết Phòng đang chọn"));
+        setPreferredSize(new Dimension(370, 340));
 
-    public RoomDetailPanel() {
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        setBorder(BorderFactory.createTitledBorder("Chi tiết phòng"));
-        setPreferredSize(new Dimension(300, 0));
-        setMinimumSize(new Dimension(260, 350));
+        JPanel grid = new JPanel(new GridLayout(7, 2, 6, 6));
+        grid.setBorder(new EmptyBorder(6, 12, 6, 12));
+        Font bold = new Font("Segoe UI", Font.BOLD, 13);
+        lblRoomNo.setFont(bold);
+        lblCleaning.setFont(bold);
+        lblPolicyPrice.setFont(bold);
+        lblPolicyPrice.setForeground(new Color(192, 57, 43));
 
-        lblRoomNumber = new JLabel("Chọn một phòng trên sơ đồ");
-        lblRoomNumber.setFont(new Font("Arial", Font.BOLD, 16));
-        lblRoomType = new JLabel("Loại phòng: —");
-        lblStatus = new JLabel("Trạng thái: —");
-        lblPrice = new JLabel("Giá: —");
-        lblOccupancy = new JLabel("Sức chứa tối đa: —");
+        grid.add(new JLabel("Số phòng:"));              grid.add(lblRoomNo);
+        grid.add(new JLabel("Hạng phòng:"));            grid.add(lblType);
+        grid.add(new JLabel("Tầng:"));                  grid.add(lblFloor);
+        grid.add(new JLabel("Trạng thái:"));            grid.add(lblStatus);
+        grid.add(new JLabel("Yêu cầu dọn phòng:"));     grid.add(lblCleaning);
+        grid.add(new JLabel("Giá gốc niêm yết:"));      grid.add(lblBasePrice);
+        grid.add(new JLabel("Giá theo CS hiện tại:"));  grid.add(lblPolicyPrice);
 
-        txtAmenities = createReadOnlyTextArea(2);
-        txtAmenities.setText("Tiện nghi: —");
-        txtGuests = createReadOnlyTextArea(6);
-        txtGuests.setText("Chưa chọn phòng.");
+        txtAmenitiesAndGuests.setLineWrap(true);
+        txtAmenitiesAndGuests.setWrapStyleWord(true);
+        txtAmenitiesAndGuests.setEditable(false);
+        txtAmenitiesAndGuests.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        JScrollPane scroll = new JScrollPane(txtAmenitiesAndGuests);
+        scroll.setBorder(BorderFactory.createTitledBorder("Tiện nghi & Khách đang lưu trú trong phòng"));
 
-        btnCleaning = new JToggleButton("Yêu cầu dọn phòng");
-        btnCleaning.setAlignmentX(LEFT_ALIGNMENT);
-        btnCleaning.setEnabled(false);
-        btnCleaning.setFocusPainted(false);
-        btnCleaning.setOpaque(true);
-        btnCleaning.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        JPanel btns = new JPanel(new GridLayout(3, 1, 5, 5));
+        btns.setBorder(new EmptyBorder(4, 10, 8, 10));
 
-        btnCleaning.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (currentRoom == null) {
-                    return;
-                }
+        JButton btnBook = new JButton("Đặt phòng này ngay");
+        btnBook.setFont(bold);
+        btnBook.addActionListener(e -> onBook.run());
 
-                boolean requested = btnCleaning.isSelected();
-                currentRoom.setCleaningRequested(requested);
-                updateCleaningButton(requested);
+        btnToggleCleaning = new JButton("Yêu cầu Dọn phòng / Hoàn tất dọn");
+        btnToggleCleaning.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnToggleCleaning.setForeground(new Color(25, 80, 150));
+        btnToggleCleaning.addActionListener(e -> onToggleCleaning.run());
 
-                if (mapPanel != null) {
-                    mapPanel.refreshMap();
-                }
-            }
-        });
+        JButton btnMaint = new JButton("Đổi trạng thái Bảo trì / Trống");
+        btnMaint.addActionListener(e -> onMaint.run());
 
-        add(Box.createVerticalStrut(12));
-        add(lblRoomNumber);
-        add(Box.createVerticalStrut(14));
-        add(lblRoomType);
-        add(Box.createVerticalStrut(9));
-        add(lblStatus);
-        add(Box.createVerticalStrut(9));
-        add(lblPrice);
-        add(Box.createVerticalStrut(9));
-        add(lblOccupancy);
-        add(Box.createVerticalStrut(9));
-        add(new JLabel("Tiện nghi:"));
-        add(Box.createVerticalStrut(3));
-        txtAmenities.setAlignmentX(LEFT_ALIGNMENT);
-        add(txtAmenities);
-        add(Box.createVerticalStrut(14));
-        add(new JLabel("Khách đang lưu trú:"));
-        add(Box.createVerticalStrut(4));
-        JScrollPane guestsScrollPane = new JScrollPane(txtGuests);
-        guestsScrollPane.setAlignmentX(LEFT_ALIGNMENT);
-        guestsScrollPane.setPreferredSize(new Dimension(270, 135));
-        guestsScrollPane.setMinimumSize(new Dimension(220, 90));
-        guestsScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
-        add(guestsScrollPane);
-        add(Box.createVerticalStrut(18));
-        add(btnCleaning);
-        add(Box.createVerticalGlue());
+        btns.add(btnBook);
+        btns.add(btnToggleCleaning);
+        btns.add(btnMaint);
+
+        add(grid, BorderLayout.NORTH);
+        add(scroll, BorderLayout.CENTER);
+        add(btns, BorderLayout.SOUTH);
     }
 
-    /** Giữ lại chữ ký phương thức cũ để tương thích với nơi đang gọi panel này. */
-    public void updateDetail(Room room, RoomMapPanel map) {
-        List<String> guestNames = map == null ? null : map.getGuestNamesForRoom(room);
-        updateDetail(room, map, guestNames);
-    }
+    public void displayRoom(Room room, PricingPolicy policy, Booking activeBooking) {
+        if (room == null) return;
+        NumberFormat vnd = NumberFormat.getCurrencyInstance(HotelBookingApp.VI_LOCALE);
+        lblRoomNo.setText("Phòng " + room.getRoomNumber());
+        lblType.setText(room.getRoomTypeName() + " (Tối đa " + room.getMaxOccupancy() + " khách)");
+        lblFloor.setText("Tầng " + room.getFloor());
+        lblStatus.setText(room.getStatus().getDisplayName());
 
-    /** Cập nhật chi tiết phòng và danh sách khách do lớp quản lý dữ liệu cung cấp. */
-    public void updateDetail(Room room, RoomMapPanel map, List<String> guestNames) {
-        this.currentRoom = room;
-        this.mapPanel = map;
-
-        if (room == null) {
-            clearDetail();
-            return;
-        }
-
-        lblRoomNumber.setText("Phòng: " + room.getRoomNumber() + " - Tầng " + room.getFloor());
-        lblRoomType.setText("Loại phòng: " + safeText(room.getRoomTypeName()));
-        lblStatus.setText("Trạng thái: " + getStatusText(room.getStatus()));
-
-        NumberFormat moneyFormat = NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN"));
-        moneyFormat.setMaximumFractionDigits(0);
-        moneyFormat.setMinimumFractionDigits(0);
-        lblPrice.setText("Giá: " + moneyFormat.format(room.getPricePerNight()) + " VNĐ/đêm");
-        lblOccupancy.setText("Sức chứa tối đa: " + room.getMaxOccupancy() + " người");
-        txtAmenities.setText(safeText(room.getAmenities()));
-        txtAmenities.setCaretPosition(0);
-        updateGuestList(guestNames);
-
-        btnCleaning.setEnabled(true);
-        updateCleaningButton(room.isCleaningRequested());
-        revalidate();
-        repaint();
-    }
-
-    /** Đưa panel về trạng thái ban đầu khi chưa chọn phòng. */
-    public void clearDetail() {
-        currentRoom = null;
-        mapPanel = null;
-        lblRoomNumber.setText("Chọn một phòng trên sơ đồ");
-        lblRoomType.setText("Loại phòng: —");
-        lblStatus.setText("Trạng thái: —");
-        lblPrice.setText("Giá: —");
-        lblOccupancy.setText("Sức chứa tối đa: —");
-        txtAmenities.setText("—");
-        txtGuests.setText("Chưa chọn phòng.");
-        btnCleaning.setSelected(false);
-        btnCleaning.setText("Yêu cầu dọn phòng");
-        btnCleaning.setEnabled(false);
-        btnCleaning.setBackground(UIManager.getColor("Button.background"));
-    }
-
-    private JTextArea createReadOnlyTextArea(int rows) {
-        JTextArea textArea = new JTextArea(rows, 18);
-        textArea.setEditable(false);
-        textArea.setLineWrap(true);
-        textArea.setWrapStyleWord(true);
-        textArea.setFocusable(false);
-        textArea.setFont(new Font("Arial", Font.PLAIN, 12));
-        textArea.setBackground(getBackground());
-        textArea.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
-        return textArea;
-    }
-
-    private void updateGuestList(List<String> guestNames) {
-        if (guestNames == null) {
-            txtGuests.setText("Chưa cập nhật dữ liệu khách lưu trú.");
-            txtGuests.setCaretPosition(0);
-            return;
-        }
-        if (guestNames.isEmpty()) {
-            txtGuests.setText("Không có khách đang lưu trú.");
-            txtGuests.setCaretPosition(0);
-            return;
-        }
-
-        StringBuilder text = new StringBuilder();
-        for (int i = 0; i < guestNames.size(); i++) {
-            String name = guestNames.get(i);
-            if (i > 0) {
-                text.append('\n');
-            }
-            text.append(i + 1).append(". ")
-                    .append(name == null || name.trim().isEmpty() ? "Khách không rõ tên" : name.trim());
-        }
-        txtGuests.setText(text.toString());
-        txtGuests.setCaretPosition(0);
-    }
-
-    private void updateCleaningButton(boolean requested) {
-        btnCleaning.setSelected(requested);
-        if (requested) {
-            btnCleaning.setText("Hủy yêu cầu dọn phòng");
-            btnCleaning.setBackground(new Color(255, 230, 210));
+        if (room.isCleaningRequested()) {
+            lblCleaning.setText("Đang yêu cầu dọn phòng!");
+            lblCleaning.setForeground(new Color(41, 128, 185));
+            btnToggleCleaning.setText("Xác nhận Đã dọn phòng xong");
         } else {
-            btnCleaning.setText("Yêu cầu dọn phòng");
-            btnCleaning.setBackground(UIManager.getColor("Button.background"));
+            lblCleaning.setText("Đã dọn sạch sẽ");
+            lblCleaning.setForeground(new Color(39, 174, 96));
+            btnToggleCleaning.setText("Gửi Yêu cầu Dọn phòng");
         }
-    }
 
-    private String getStatusText(RoomStatus status) {
-        if (status == RoomStatus.AVAILABLE) {
-            return "Trống";
-        }
-        if (status == RoomStatus.OCCUPIED) {
-            return "Đang có khách";
-        }
-        if (status == RoomStatus.MAINTENANCE) {
-            return "Bảo trì";
-        }
-        return "Chưa xác định";
-    }
+        lblBasePrice.setText(vnd.format(room.getPricePerNight()) + " / đêm");
+        lblPolicyPrice.setText(vnd.format(policy.calculatePrice(room, 1)) + " / đêm");
 
-    private String safeText(String text) {
-        return text == null || text.trim().isEmpty() ? "Chưa có thông tin" : text.trim();
+        StringBuilder info = new StringBuilder();
+        info.append("• Tiện nghi: ").append(room.getAmenities()).append("\n");
+        if (activeBooking != null&&"Đang lưu trú".equalsIgnoreCase(activeBooking.getStatus())) {
+            info.append("• Đoàn khách đang ở (").append(activeBooking.getGuests().size()).append(" người):\n");
+            int idx = 1;
+            for (Guest g : activeBooking.getGuests()) {
+                info.append("   ").append(idx++).append(". ").append(g.getName()).append("\n")
+                    .append("    -Giới tính: ").append(g.getGender().getLabel()).append("\n")
+                    .append("    -CCCD: ").append(g.getCccd()).append("\n")
+                    .append("    -Số điện thoại: " ).append(g.getPhone()).append(")\n");
+            }
+        } else {
+            info.append("• Hiện chưa có khách lưu trú.");
+        }
+        txtAmenitiesAndGuests.setText(info.toString());
+        txtAmenitiesAndGuests.setCaretPosition(0);
     }
 }
