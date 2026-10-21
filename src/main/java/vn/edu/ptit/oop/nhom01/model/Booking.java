@@ -50,8 +50,14 @@ public class Booking {
     private final LocalDate checkIn;
     private final LocalDate checkOut;
     private boolean checkedOut;
+    private String status;
 
     public Booking(String bookingId, List<Guest> guestList, Room room, LocalDate checkIn, LocalDate checkOut)
+            throws InvalidBookingDataException {
+        this(bookingId, guestList, room, checkIn, checkOut, "Đặt phòng thành công");
+    }
+
+    public Booking(String bookingId, List<Guest> guestList, Room room, LocalDate checkIn, LocalDate checkOut, String status)
             throws InvalidBookingDataException {
         if (guestList == null || guestList.isEmpty())
             throw new InvalidBookingDataException("Phải có ít nhất 1 khách hàng trong danh sách đặt phòng!");
@@ -64,7 +70,8 @@ public class Booking {
         this.room = room;
         this.checkIn = checkIn;
         this.checkOut = checkOut;
-        this.checkedOut = false;
+        this.status = (status != null && !status.trim().isEmpty()) ? status : "Đặt phòng thành công";
+        this.checkedOut = "CHECKED_OUT".equalsIgnoreCase(status) || "Đã Check-out".equalsIgnoreCase(status) || "Đã trả phòng".equalsIgnoreCase(status);
     }
 
     public Guest getPrimaryGuest() {
@@ -98,5 +105,21 @@ public class Booking {
     public LocalDate getCheckIn() { return checkIn; }
     public LocalDate getCheckOut() { return checkOut; }
     public boolean isCheckedOut() { return checkedOut; }
-    public void setCheckedOut(boolean checkedOut) { this.checkedOut = checkedOut; }
+    public void setCheckedOut(boolean checkedOut) { 
+        this.checkedOut = checkedOut; 
+        if (checkedOut && (this.status == null || !this.status.equalsIgnoreCase("CHECKED_OUT"))) {
+            this.status = "Đã Check-out";
+        }
+    }
+
+    public String getStatus() { 
+        return status; 
+    }
+
+    public void setStatus(String status) { 
+        this.status = status; 
+        if ("CHECKED_OUT".equalsIgnoreCase(status) || "Đã Check-out".equalsIgnoreCase(status) || "Đã trả phòng".equalsIgnoreCase(status)) {
+            this.checkedOut = true;
+        }
+    }
 }
