@@ -2,12 +2,14 @@ package vn.edu.ptit.oop.nhom08.ui;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.StandardChartTheme;
+import vn.edu.ptit.oop.nhom08.service.BookingService;
 import vn.edu.ptit.oop.nhom08.ui.panels.BarChartPanel;
 import vn.edu.ptit.oop.nhom08.ui.panels.LineChartPanel;
 
 import javax.swing.*;
 import java.awt.*;
-
+import java.time.LocalDate;
+import java.util.Map;
 
 public class ChartWindow extends JFrame {
     private JTabbedPane tabbedPane;
@@ -15,9 +17,9 @@ public class ChartWindow extends JFrame {
     private LineChartPanel lineChartPanel;
     private JButton btnRefresh;
     private JButton btnClose;
+    private BookingService bookingService;
 
     static {
-      
         StandardChartTheme theme = (StandardChartTheme) StandardChartTheme.createJFreeTheme();
         theme.setExtraLargeFont(new Font("Segoe UI", Font.BOLD, 18)); // Tiêu đề lớn
         theme.setLargeFont(new Font("Segoe UI", Font.BOLD, 14));      // Nhãn trục
@@ -26,19 +28,23 @@ public class ChartWindow extends JFrame {
     }
 
     public ChartWindow() {
+        this(null);
+    }
+
+    public ChartWindow(BookingService bookingService) {
+        this.bookingService = bookingService;
         setTitle("Thống Kê & Báo Cáo Doanh Thu Khách Sạn - Nhóm 8");
         setSize(950, 650);
         setLocationRelativeTo(null);
-        
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         initUI();
+        refreshCharts();
     }
 
     private void initUI() {
         setLayout(new BorderLayout());
 
-       
         tabbedPane = new JTabbedPane();
         barChartPanel = new BarChartPanel();
         lineChartPanel = new LineChartPanel();
@@ -48,15 +54,13 @@ public class ChartWindow extends JFrame {
 
         add(tabbedPane, BorderLayout.CENTER);
 
-        
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Color.LIGHT_GRAY));
 
         btnRefresh = new JButton("Làm mới dữ liệu");
         btnRefresh.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         btnRefresh.addActionListener(e -> {
-            barChartPanel.simulateRandomData();
-            lineChartPanel.refreshRevenueData();
+            refreshCharts();
             JOptionPane.showMessageDialog(this,
                     "Đã cập nhật lại toàn bộ số liệu thống kê mới nhất!",
                     "Thông báo", JOptionPane.INFORMATION_MESSAGE);
@@ -70,6 +74,19 @@ public class ChartWindow extends JFrame {
         bottomPanel.add(btnClose);
 
         add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    public void refreshCharts() {
+        if (bookingService != null) {
+            Map<String, Double> rates = bookingService.calculateOccupancyRateByRoomType();
+            barChartPanel.updateOccupancyData(rates);
+
+            Map<LocalDate, Double> revenue = bookingService.getRevenueLast14Days();
+            lineChartPanel.updateRevenueData(revenue);
+        } else {
+            barChartPanel.simulateRandomData();
+            lineChartPanel.refreshRevenueData();
+        }
     }
 
     public static void main(String[] args) {
