@@ -1,58 +1,40 @@
+// Phụ trách: Nguyễn Văn Giác - N24DCAT021
 package vn.edu.ptit.oop.nhom08.ui;
 
-import javax.swing.JTable;
-import javax.swing.SwingConstants;
+import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
-import java.awt.Color;
-import java.awt.Component;
-import java.text.NumberFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
+import java.awt.*;
 
-/** Định dạng ô và tô màu dòng đặt phòng. Phụ trách: Nguyễn Văn Giác - N24DCAT021. */
 public class BookingStatusCellRenderer extends DefaultTableCellRenderer {
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private final NumberFormat moneyFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("vi-VN"));
-
     @Override
-    public Component getTableCellRendererComponent(JTable table, Object value, boolean selected,
-                                                   boolean focused, int viewRow, int viewColumn) {
-        super.getTableCellRendererComponent(table, value, selected, focused, viewRow, viewColumn);
-        // Renderer được tái sử dụng cho nhiều ô, nên luôn đặt lại định dạng trước khi dùng.
-        setToolTipText(null);
-        setHorizontalAlignment(value instanceof Number ? SwingConstants.RIGHT : SwingConstants.LEFT);
-        int modelColumn = table.convertColumnIndexToModel(viewColumn);
-        if (value instanceof LocalDate) {
-            setText(DATE_FORMAT.format((LocalDate) value));
-            setHorizontalAlignment(SwingConstants.CENTER);
-        } else if (table.getModel() instanceof BookingTableModel
-                && modelColumn == BookingTableModel.TOTAL_COLUMN && value instanceof Number) {
-            setText(moneyFormat.format(((Number) value).doubleValue()));
-        }
-
-        if (table.getModel() instanceof BookingTableModel && viewRow >= 0) {
-            BookingTableModel model = (BookingTableModel) table.getModel();
-            // Sau khi lọc/sắp xếp, vị trí trên bảng không còn là vị trí trong danh sách.
-            int modelRow = table.convertRowIndexToModel(viewRow);
-            String status = model.getBookingStatus(modelRow);
-            setToolTipText(status);
-            if (!selected) {
-                setForeground(table.getForeground());
-                if (model.getBookingAt(modelRow).isCheckedOut()) {
-                    setBackground(new Color(235, 238, 240));
-                } else if (!LocalDate.now().isBefore(model.getBookingAt(modelRow).getCheckOut())) {
-                    setBackground(new Color(255, 235, 220));
-                } else if (LocalDate.now().isBefore(model.getBookingAt(modelRow).getCheckIn())) {
-                    setBackground(new Color(231, 242, 255));
-                } else {
-                    setBackground(new Color(232, 247, 237));
-                }
+    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+        Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        
+        int modelRow = table.convertRowIndexToModel(row);
+        // Lấy giá trị trạng thái từ cột 11 (hoặc cột hiển thị trạng thái của bạn)
+        String status = String.valueOf(table.getModel().getValueAt(modelRow, 11));
+        
+        if (!isSelected) {
+            // Thiết lập màu nền và màu chữ riêng biệt cho từng trạng thái
+            if ("Đã Check-out".equals(status)) {
+                c.setBackground(new Color(235, 245, 238)); // Xanh lá nhạt
+                setForeground(new Color(39, 110, 70));     // Chữ xanh đậm
+            } else if ("Đang lưu trú".equals(status)) {
+                c.setBackground(new Color(253, 237, 236)); // Đỏ nhạt / hồng nhạt
+                setForeground(new Color(192, 57, 43));     // Chữ đỏ đậm
+            } else if ("Đặt phòng thành công".equals(status) || "CONFIRMED".equals(status)) {
+                c.setBackground(new Color(235, 243, 250)); // Xanh dương nhạt
+                setForeground(new Color(41, 128, 185));    // Chữ xanh dương đậm
+            } else {
+                c.setBackground(Color.WHITE);
+                setForeground(Color.BLACK);
             }
-        } else if (!selected) {
-            setBackground(table.getBackground());
-            setForeground(table.getForeground());
+        } else {
+            // Khi dòng được chọn, ưu tiên sử dụng màu chữ và màu nền khi chọn của JTable để tránh bị chìm chữ
+            setForeground(table.getSelectionForeground());
+            setBackground(table.getSelectionBackground());
         }
-        return this;
+        
+        return c;
     }
 }

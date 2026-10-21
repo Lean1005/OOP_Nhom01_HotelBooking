@@ -1,199 +1,211 @@
+// Phụ trách: Nguyễn Văn Giác - N24DCAT021
 package vn.edu.ptit.oop.nhom08.ui.dialogs;
 
-import vn.edu.ptit.oop.nhom08.model.DeluxeRoom;
-import vn.edu.ptit.oop.nhom08.model.Room;
-import vn.edu.ptit.oop.nhom08.model.StandardRoom;
-import vn.edu.ptit.oop.nhom08.model.SuiteRoom;
-import vn.edu.ptit.oop.nhom08.service.BookingService;
-
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
 import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.List;
-import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/** Thêm một phòng hoặc một tầng. Phụ trách: Nguyễn Văn Giác - N24DCAT021. */
 public class AddRoomFloorDialog extends JDialog {
     private final BookingService bookingService;
-    private final JTabbedPane tabs = new JTabbedPane();
-    private final JComboBox<Integer> floorCombo = new JComboBox<>();
-    private final JTextField roomNumberField = new JTextField(16);
-    private final JComboBox<String> roomTypeCombo = new JComboBox<>(new String[]{"Standard", "Deluxe", "Suite"});
-    private final JSpinner bedCountSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 10, 1));
-    private final JTextField viewField = new JTextField("Thành phố", 16);
-    private final JCheckBox jacuzziCheckBox = new JCheckBox("Có bồn Jacuzzi", true);
-    private final JPanel typeOptions = new JPanel(new CardLayout());
-    private final JSpinner newFloorSpinner;
-    private boolean changed;
+    private boolean changed = false;
     private Room lastAddedRoom;
     private String actionSummaryMessage = "";
 
-    public AddRoomFloorDialog(Frame owner, BookingService bookingService, int currentFloor, int defaultTabIndex) {
-        super(owner, "Thêm phòng / Thêm tầng", true);
-        this.bookingService = Objects.requireNonNull(bookingService, "BookingService");
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        List<Integer> floors = rooms().stream().map(Room::getFloor).distinct().sorted().collect(Collectors.toList());
-        floors.forEach(floorCombo::addItem);
-        if (floors.contains(currentFloor)) {
-            floorCombo.setSelectedItem(currentFloor);
+    public AddRoomFloorDialog(JFrame parent, BookingService bookingService, int selectedFloor, int initialTab) {
+        super(parent, "Quản lý Mở rộng Khách sạn: Thêm Phòng & Thêm Tầng - Nhóm8HotelBooking", true);
+        this.bookingService = bookingService;
+        setSize(540, 400);
+        setLocationRelativeTo(parent);
+        setLayout(new BorderLayout(8, 8));
+
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        tabbedPane.addTab("1. Thêm Phòng mới vào Tầng", createAddSingleRoomPanel(selectedFloor));
+        tabbedPane.addTab("2. Thêm Tầng mới (Tạo hàng loạt phòng)", createAddFloorPanel());
+
+        if (initialTab >= 0 && initialTab < tabbedPane.getTabCount()) {
+            tabbedPane.setSelectedIndex(initialTab);
         }
-        int nextFloor = floors.isEmpty() ? 1 : Math.min(9998, floors.get(floors.size() - 1)) + 1;
-        newFloorSpinner = new JSpinner(new SpinnerNumberModel(nextFloor, 1, 9999, 1));
-        initComponents();
-        tabs.setSelectedIndex(defaultTabIndex == 1 ? 1 : 0);
-        pack();
-        setMinimumSize(new Dimension(530, 350));
-        setLocationRelativeTo(owner);
+
+        add(tabbedPane, BorderLayout.CENTER);
     }
 
-    private List<Room> rooms() {
-        return bookingService.getRepository().getAllRooms();
-    }
+    private JPanel createAddSingleRoomPanel(int defaultFloor) {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(new EmptyBorder(14, 16, 12, 16));
 
-    private void initComponents() {
-        JPanel content = new JPanel(new BorderLayout(8, 8));
-        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        setContentPane(content);
+        JPanel form = new JPanel(new GridLayout(6, 2, 8, 10));
 
-        JPanel roomPanel = new JPanel(new GridBagLayout());
-        addField(roomPanel, 0, "Tầng hiện có:", floorCombo);
-        addField(roomPanel, 1, "Số phòng mới:", roomNumberField);
-        addField(roomPanel, 2, "Loại phòng:", roomTypeCombo);
-        typeOptions.add(labeledOption("Số giường:", bedCountSpinner), "Standard");
-        typeOptions.add(labeledOption("Hướng nhìn:", viewField), "Deluxe");
-        typeOptions.add(labeledOption("Tiện nghi:", jacuzziCheckBox), "Suite");
-        addField(roomPanel, 3, "Đặc điểm:", typeOptions);
-        roomTypeCombo.addActionListener(event -> ((CardLayout) typeOptions.getLayout())
-                .show(typeOptions, (String) roomTypeCombo.getSelectedItem()));
-        tabs.addTab("Thêm một phòng", roomPanel);
+        List<Integer> floors = bookingService.getExistingFloors();
+        JComboBox<Integer> cboFloor = new JComboBox<>(floors.toArray(new Integer[0]));
+        cboFloor.setSelectedItem(defaultFloor);
 
-        JPanel floorPanel = new JPanel(new GridBagLayout());
-        addField(floorPanel, 0, "Số tầng mới:", newFloorSpinner);
-        addField(floorPanel, 1, "Quy mô:", new JLabel("6 phòng Standard, mỗi phòng 2 giường"));
-        addField(floorPanel, 2, "Số phòng:", new JLabel("Tầng × 100 + 01 đến 06 (ví dụ tầng 5: 501–506)"));
-        tabs.addTab("Thêm tầng mới", floorPanel);
-        content.add(tabs, BorderLayout.CENTER);
+        JTextField txtRoomNo = new JTextField(bookingService.suggestNextRoomNumber(defaultFloor));
+        txtRoomNo.setFont(new Font("Segoe UI", Font.BOLD, 13));
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton cancelButton = new JButton("Hủy");
-        cancelButton.addActionListener(event -> dispose());
-        JButton addButton = new JButton("Xác nhận thêm");
-        addButton.addActionListener(event -> {
-            if (changed) return;
-            try {
-                if (tabs.getSelectedIndex() == 0) {
-                    addSingleRoom();
-                } else {
-                    addFloor();
-                }
-                changed = true;
-                dispose();
-            } catch (java.text.ParseException exception) {
-                showError(tabs.getSelectedIndex() == 0 ? "Số giường phải là số nguyên từ 1 đến 10."
-                        : "Số tầng phải là số nguyên từ 1 đến 9999.");
-            } catch (IllegalArgumentException | IllegalStateException exception) {
-                showError(exception.getMessage());
+        JComboBox<String> cboType = new JComboBox<>(new String[]{"Standard", "Deluxe", "Suite"});
+        JSpinner spnBeds = new JSpinner(new SpinnerNumberModel(2, 1, 4, 1));
+        JComboBox<String> cboView = new JComboBox<>(new String[]{"Hướng Biển", "Hướng Thành phố", "Hướng Hồ bơi"});
+        JCheckBox chkJacuzzi = new JCheckBox("Trang bị bể sục Jacuzzi VIP", true);
+
+        cboFloor.addActionListener(e -> {
+            Integer fl = (Integer) cboFloor.getSelectedItem();
+            if (fl != null) {
+                txtRoomNo.setText(bookingService.suggestNextRoomNumber(fl));
             }
         });
-        actions.add(cancelButton);
-        actions.add(addButton);
-        content.add(actions, BorderLayout.SOUTH);
-        getRootPane().registerKeyboardAction(event -> dispose(), KeyStroke.getKeyStroke("ESCAPE"),
-                JComponent.WHEN_IN_FOCUSED_WINDOW);
-    }
 
-    private static JPanel labeledOption(String label, Component component) {
-        JPanel panel = new JPanel(new BorderLayout(6, 0));
-        panel.add(new JLabel(label), BorderLayout.WEST);
-        panel.add(component, BorderLayout.CENTER);
+        form.add(new JLabel("Chọn Tầng muốn thêm phòng:"));  form.add(cboFloor);
+        form.add(new JLabel("Số phòng mới (tự động gợi ý):")); form.add(txtRoomNo);
+        form.add(new JLabel("Chọn Hạng phòng:"));            form.add(cboType);
+        form.add(new JLabel("Số giường (nếu là Standard):")); form.add(spnBeds);
+        form.add(new JLabel("Hướng ban công (nếu là Deluxe):")); form.add(cboView);
+        form.add(new JLabel("Tiện ích VIP (nếu là Suite):")); form.add(chkJacuzzi);
+
+        JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton btnAddRoom = new JButton("Xác nhận Thêm Phòng");
+        btnAddRoom.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnAddRoom.setForeground(new Color(22, 160, 133));
+        JButton btnClose = new JButton("Đóng");
+
+        btnAddRoom.addActionListener(e -> {
+            try {
+                int fl = (Integer) cboFloor.getSelectedItem();
+                String roomNo = txtRoomNo.getText();
+                String type = (String) cboType.getSelectedItem();
+                int beds = (Integer) spnBeds.getValue();
+                String view = (String) cboView.getSelectedItem();
+                boolean jacuzzi = chkJacuzzi.isSelected();
+
+                lastAddedRoom = bookingService.addSingleRoom(roomNo, fl, type, beds, view, jacuzzi);
+                changed = true;
+                actionSummaryMessage = "Đã thêm thành công Phòng " + lastAddedRoom.getRoomNumber()
+                        + " (" + lastAddedRoom.getRoomTypeName() + ") vào Tầng " + fl + "!";
+                JOptionPane.showMessageDialog(this, actionSummaryMessage, "Thêm Phòng thành công", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
+            } catch (InvalidBookingDataException ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Lỗi dữ liệu", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        btnClose.addActionListener(e -> dispose());
+
+        btnBar.add(btnAddRoom);
+        btnBar.add(btnClose);
+
+        panel.add(form, BorderLayout.CENTER);
+        panel.add(btnBar, BorderLayout.SOUTH);
         return panel;
     }
 
-    private static void addField(JPanel panel, int row, String label, Component component) {
-        GridBagConstraints constraints = new GridBagConstraints();
-        constraints.insets = new Insets(8, 6, 8, 6);
-        constraints.gridy = row;
-        constraints.anchor = GridBagConstraints.WEST;
-        panel.add(new JLabel(label), constraints);
-        constraints.gridx = 1;
-        constraints.weightx = 1;
-        constraints.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(component, constraints);
-    }
+    private JPanel createAddFloorPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(new EmptyBorder(14, 16, 12, 16));
 
-    private void addSingleRoom() throws java.text.ParseException {
-        Integer floor = (Integer) floorCombo.getSelectedItem();
-        if (floor == null) {
-            throw new IllegalArgumentException("Chưa có tầng nào. Hãy thêm tầng mới trước.");
-        }
-        String number = roomNumberField.getText().trim();
-        if (number.isEmpty()) {
-            throw new IllegalArgumentException("Vui lòng nhập số phòng.");
-        }
-        if (rooms().stream().anyMatch(room -> room.getRoomNumber().equalsIgnoreCase(number))) {
-            throw new IllegalArgumentException("Số phòng " + number + " đã tồn tại.");
-        }
-        Room room;
-        switch (roomTypeCombo.getSelectedIndex()) {
-            case 0:
-                bedCountSpinner.commitEdit();
-                int beds = ((Number) bedCountSpinner.getValue()).intValue();
-                if (beds < 1 || beds > 10) {
-                    throw new IllegalArgumentException("Số giường phải từ 1 đến 10.");
+        int nextFloor = bookingService.getNextNewFloorNumber();
+        JPanel form = new JPanel(new GridLayout(5, 2, 8, 12));
+
+        JSpinner spnNewFloor = new JSpinner(new SpinnerNumberModel(nextFloor, 1, 30, 1));
+        spnNewFloor.setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        JSpinner spnRoomCount = new JSpinner(new SpinnerNumberModel(6, 1, 12, 1));
+        JComboBox<String> cboFloorType = new JComboBox<>(new String[]{
+                "Hỗn hợp (Standard + Deluxe + Suite)",
+                "Standard",
+                "Deluxe",
+                "Suite"
+        });
+        JLabel lblPreview = new JLabel();
+        lblPreview.setForeground(new Color(41, 128, 185));
+        lblPreview.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+
+        Runnable updatePreview = () -> {
+            int fl = (Integer) spnNewFloor.getValue();
+            int cnt = (Integer) spnRoomCount.getValue();
+            lblPreview.setText(String.format("Sẽ tự động tạo %d phòng: từ P.%d01 đến P.%d%02d", cnt, fl, fl, cnt));
+        };
+        spnNewFloor.addChangeListener(e -> updatePreview.run());
+        spnRoomCount.addChangeListener(e -> updatePreview.run());
+        updatePreview.run();
+
+        form.add(new JLabel("Số thứ tự Tầng mới cần xây:"));  form.add(spnNewFloor);
+        form.add(new JLabel("Số lượng phòng trên Tầng mới:")); form.add(spnRoomCount);
+        form.add(new JLabel("Cấu hình Hạng phòng:"));         form.add(cboFloorType);
+        form.add(new JLabel("Dự kiến các phòng được tạo:"));  form.add(lblPreview);
+
+        JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton btnAddFloor = new JButton("Xác nhận Xây Thêm Tầng");
+        btnAddFloor.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnAddFloor.setForeground(new Color(41, 128, 185));
+        JButton btnClose = new JButton("Đóng");
+
+        btnAddFloor.addActionListener(e -> {
+            try {
+                int fl = (Integer) spnNewFloor.getValue();
+                int cnt = (Integer) spnRoomCount.getValue();
+                String opt = (String) cboFloorType.getSelectedItem();
+
+                List<Room> created = bookingService.addNewFloor(fl, cnt, opt);
+                if (!created.isEmpty()) {
+                    lastAddedRoom = created.get(0);
                 }
-                room = new StandardRoom(number, floor, beds);
-                break;
-            case 1:
-                room = new DeluxeRoom(number, floor, viewField.getText().trim());
-                break;
-            case 2:
-                room = new SuiteRoom(number, floor, jacuzziCheckBox.isSelected());
-                break;
-            default: throw new IllegalArgumentException("Vui lòng chọn loại phòng.");
-        }
-        bookingService.addSingleRoom(room);
-        lastAddedRoom = room;
-        actionSummaryMessage = "Đã thêm phòng " + number + " (" + room.getRoomTypeName() + ") vào tầng " + floor + ".";
-    }
-
-    private void addFloor() throws java.text.ParseException {
-        newFloorSpinner.commitEdit();
-        int floor = ((Number) newFloorSpinner.getValue()).intValue();
-        if (floor < 1 || floor > 9999) {
-            throw new IllegalArgumentException("Số tầng phải từ 1 đến 9999.");
-        }
-        if (rooms().stream().anyMatch(room -> room.getFloor() == floor)) {
-            throw new IllegalArgumentException("Tầng " + floor + " đã tồn tại. Dùng tab Thêm một phòng để bổ sung.");
-        }
-        for (int index = 1; index <= 6; index++) {
-            String number = String.valueOf(floor * 100 + index);
-            if (rooms().stream().anyMatch(room -> room.getRoomNumber().equalsIgnoreCase(number))) {
-                throw new IllegalArgumentException("Không thể thêm tầng: số phòng " + number + " đã tồn tại.");
+                changed = true;
+                actionSummaryMessage = "Đã xây thêm Tầng " + fl + " với " + created.size() + " phòng mới thành công!";
+                JOptionPane.showMessageDialog(this, actionSummaryMessage, "Thêm Tầng thành công", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
+            } catch (InvalidBookingDataException ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Lỗi dữ liệu", JOptionPane.WARNING_MESSAGE);
             }
-        }
-        // Giữ đúng chữ ký addNewFloor(int) và quy mô 6 phòng trong BookingService hiện tại.
-        bookingService.addNewFloor(floor);
-        List<Room> added = rooms().stream().filter(room -> room.getFloor() == floor).collect(Collectors.toList());
-        if (added.isEmpty()) {
-            throw new IllegalStateException("Service chưa thêm phòng vào tầng mới.");
-        }
-        lastAddedRoom = added.get(0);
-        actionSummaryMessage = "Đã thêm tầng " + floor + " với " + added.size() + " phòng.";
+        });
+        btnClose.addActionListener(e -> dispose());
+
+        btnBar.add(btnAddFloor);
+        btnBar.add(btnClose);
+
+        panel.add(form, BorderLayout.CENTER);
+        panel.add(btnBar, BorderLayout.SOUTH);
+        return panel;
     }
 
-    private void showError(String message) {
-        JOptionPane.showMessageDialog(this, message, "Không thể thêm phòng/tầng", JOptionPane.WARNING_MESSAGE);
-    }
-
-    public boolean isChanged() {
-        return changed;
-    }
-
-    public Room getLastAddedRoom() {
-        return lastAddedRoom;
-    }
-
-    public String getActionSummaryMessage() {
-        return actionSummaryMessage;
-    }
+    public boolean isChanged() { return changed; }
+    public Room getLastAddedRoom() { return lastAddedRoom; }
+    public String getActionSummaryMessage() { return actionSummaryMessage; }
 }
