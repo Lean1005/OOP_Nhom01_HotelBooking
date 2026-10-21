@@ -1,47 +1,21 @@
 package vn.edu.ptit.oop.nhom01.ui;
-
-import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
-
-import vn.edu.ptit.oop.nhom01.*;
 import vn.edu.ptit.oop.nhom01.common.*;
-import vn.edu.ptit.oop.nhom01.exception.*;
 import vn.edu.ptit.oop.nhom01.model.*;
 import vn.edu.ptit.oop.nhom01.repository.*;
 import vn.edu.ptit.oop.nhom01.service.*;
-import vn.edu.ptit.oop.nhom01.ui.*;
 import vn.edu.ptit.oop.nhom01.ui.dialogs.*;
 import vn.edu.ptit.oop.nhom01.ui.panels.*;
 import vn.edu.ptit.oop.nhom01.util.*;
-
 import java.awt.*;
-import java.awt.event.*;
-import java.awt.geom.AffineTransform;
-import java.awt.image.BufferedImage;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class MainWindow extends BaseWindow {
     private HotelRepository repository;
@@ -56,8 +30,7 @@ public class MainWindow extends BaseWindow {
     private UserService userService;
 
     public MainWindow(User currentUser, UserService userService) {
-        super("Nhóm8HotelBooking - Hệ thống Quản lý Đặt phòng Khách sạn [" 
-                + ": " + currentUser.getFullName() + "]", 1280, 780);
+        super("Nhóm8HotelBooking - Hệ thống Quản lý Đặt phòng Khách sạn [Nhân viên: " + currentUser.getFullName() + "]", 1280, 780);
         statusBar.setBounds(0, 699, 1266, 22);
         toolBar.setBounds(0, 0, 1266, 21);
         this.currentUser = currentUser;
@@ -66,7 +39,6 @@ public class MainWindow extends BaseWindow {
 
     @Override
     protected void initUI() {
-        // ĐÃ SỬA: Chuyển sang sử dụng SqlHotelRepository để kết nối trực tiếp với SQL Server
         repository = new InMemoryHotelRepository();
         bookingService = new BookingService(repository);
 
@@ -280,7 +252,6 @@ public class MainWindow extends BaseWindow {
         if (dialog.isConfirmed()) {
             // GỌI HÀM LÀM MỚI NGAY LẬP TỨC ĐỂ ĐẨY DỮ LIỆU LÊN GIAO DIỆN CHÍNH
             refreshAllViews();
-            
             // Tự động chọn lại đúng phòng vừa đặt để người dùng thấy ngay trạng thái mới
             Booking newBooking = dialog.getCreatedBooking();
             if (newBooking != null && newBooking.getRoom() != null) {
@@ -317,7 +288,7 @@ public class MainWindow extends BaseWindow {
         InvoiceDialog dialog = new InvoiceDialog(this, selectedBooking, bookingService);
         dialog.setVisible(true);
         if (dialog.isPaid()) {
-            // ĐƯỢC THÊM: Đổi trạng thái phòng đối tượng cục bộ trong bộ nhớ ngay lập tức
+            // Đổi trạng thái phòng đối tượng cục bộ trong bộ nhớ ngay lập tức
             if (selectedBooking.getRoom() != null) {
                 selectedBooking.getRoom().setStatus(RoomStatus.AVAILABLE);
                 selectedBooking.getRoom().setCleaningRequested(true);
@@ -346,10 +317,17 @@ public class MainWindow extends BaseWindow {
                     "Thông báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        // Cập nhật trạng thái trong CSDL: 
-        // 1. PhieuDatPhong.trang_thai -> 'CHECKED_IN' (hoặc 'Đang lưu trú')
-        // 2. Phong.status -> 'OCCUPIED' (Đang có khách - chuyển sơ đồ sang màu đỏ)
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        LocalDate today = LocalDate.now();
+        if (!selectedBooking.getCheckIn().equals(today)) {
+        	String todayStr = LocalDate.now().format(dtf);
+            JOptionPane.showMessageDialog(this,
+                "Không thể check-in! Hôm nay (" + todayStr + ") không phải là ngày nhận phòng của đơn này.\n" +
+                "Đơn này có lịch check-in vào ngày: " + selectedBooking.getCheckIn().format(dtf),
+                "Lỗi Ngày Check-in", JOptionPane.WARNING_MESSAGE);
+            return; // Dừng lại, không cho phép check-in
+        }
+        // Cập nhật trạng thái trong CSDL:
         repository.updateBookingStatus(selectedBooking, "Đang lưu trú");
         
         if (selectedBooking.getRoom() != null) {

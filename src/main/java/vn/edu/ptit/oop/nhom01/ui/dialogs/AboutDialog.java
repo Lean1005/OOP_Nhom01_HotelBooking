@@ -1,48 +1,8 @@
 package vn.edu.ptit.oop.nhom01.ui.dialogs;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableRowSorter;
-
-import vn.edu.ptit.oop.nhom01.*;
-import vn.edu.ptit.oop.nhom01.common.*;
-import vn.edu.ptit.oop.nhom01.exception.*;
-import vn.edu.ptit.oop.nhom01.model.*;
-import vn.edu.ptit.oop.nhom01.repository.*;
-import vn.edu.ptit.oop.nhom01.service.*;
-import vn.edu.ptit.oop.nhom01.ui.*;
-import vn.edu.ptit.oop.nhom01.ui.dialogs.*;
-import vn.edu.ptit.oop.nhom01.ui.panels.*;
-import vn.edu.ptit.oop.nhom01.util.*;
-
 import java.awt.*;
-import java.awt.event.*;
-import java.awt.geom.AffineTransform;
-import java.awt.image.BufferedImage;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.text.NumberFormat;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 public class AboutDialog extends JDialog {
     public AboutDialog(JFrame parent) {
         super(parent, "Thông tin Nhóm8HotelBooking", true);
@@ -53,17 +13,17 @@ public class AboutDialog extends JDialog {
         JTextArea txt = new JTextArea(
                 "HỌC VIỆN CÔNG NGHỆ BƯU CHÍNH VIỄN THÔNG (PTIT)\n" +
                 "Môn học: INT1332 - Lập trình Hướng đối tượng\n" +
-                "Đơn vị: CÔNG TY TNHH NHÓM8HOTELBOOKING\n\n" +
+                "Đơn vị: CÔNG TY TNHH NHÓM 1- HOTEL BOOKING\n\n" +
                 "PHÂN CÔNG NHIỆM VỤ 9 THÀNH VIÊN:\n" +
-                "1. Thành viên 1 (Nhóm trưởng): HotelBookingApp, BaseWindow, MainWindow\n" +
-                "2. Thành viên 2: Room (abstract + cờ dọn phòng), RoomStatus, StandardRoom, DeluxeRoom, SuiteRoom\n" +
-                "3. Thành viên 3: Guest (có Giới tính), Booking (nhiều khách), RoomNotAvailableException\n" +
-                "4. Thành viên 4: PricingPolicy (Strategy BONUS), ServiceCharge, Invoice\n" +
-                "5. Thành viên 5: HotelRepository, InMemoryHotelRepository, BookingService (Thêm Phòng/Tầng)\n" +
-                "6. Thành viên 6: RoomMapPanel (Sơ đồ 2D co giãn động), RoomDetailPanel (Yêu cầu dọn phòng)\n" +
-                "7. Thành viên 7: BookingDialog (Nhiều khách + Giới tính), AddRoomFloorDialog, BookingTableModel\n" +
-                "8. Thành viên 8: InvoiceDialog, InvoicePaperPanel (Mộc đỏ & Hình ảnh DV), RoomFilterDialog\n" +
-                "9. Thành viên 9: ChartWindow, BarChartPanel, LineChartPanel (Biểu đồ Công suất & Doanh thu)\n"
+                "1. Hoàng Thị Huyền Trang (Nhóm trưởng): HotelBookingApp, BaseWindow, MainWindow\n" +
+                "2. Lê Phạm Hoàng Kha: Room (abstract + cờ dọn phòng), RoomStatus, StandardRoom, DeluxeRoom, SuiteRoom\n" +
+                "3. Trần Trí Nguyên: Guest (có Giới tính), Booking (nhiều khách), RoomNotAvailableException\n" +
+                "4. Nguyễn Minh Tuấn: PricingPolicy (Strategy BONUS), ServiceCharge, Invoice\n" +
+                "5. Lê Hoàng Nam: HotelRepository, InMemoryHotelRepository, BookingService (Thêm Phòng/Tầng)\n" +
+                "6. Hồ Hoài Sang: RoomMapPanel (Sơ đồ 2D co giãn động), RoomDetailPanel (Yêu cầu dọn phòng)\n" +
+                "7. Nguyễn Văn Giác: BookingDialog (Nhiều khách + Giới tính), AddRoomFloorDialog, BookingTableModel\n" +
+                "8. Nguyễn Lê An: InvoiceDialog, InvoicePaperPanel (Mộc đỏ & Hình ảnh DV), RoomFilterDialog\n" +
+                "9. Lâm Sỹ Nguyên: ChartWindow, BarChartPanel, LineChartPanel (Biểu đồ Công suất & Doanh thu)\n"
         );
         txt.setEditable(false);
         txt.setFont(new Font("Segoe UI", Font.PLAIN, 13));

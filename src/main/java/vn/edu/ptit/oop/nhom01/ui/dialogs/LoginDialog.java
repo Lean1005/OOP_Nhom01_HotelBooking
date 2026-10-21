@@ -9,13 +9,8 @@ import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.GridLayout;
 import java.awt.Font;
-
 import vn.edu.ptit.oop.nhom01.model.*;
-import javax.swing.JToolBar;
-import javax.swing.JRadioButton;
-
 public class LoginDialog extends javax.swing.JDialog {
     private final UserService userService;
     private boolean loggedIn = false;
