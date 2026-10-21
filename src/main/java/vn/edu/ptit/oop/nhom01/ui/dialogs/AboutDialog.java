@@ -1,75 +1,79 @@
 package vn.edu.ptit.oop.nhom08.ui.dialogs;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JDialog;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.SwingConstants;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Frame;
+import javax.swing.table.TableRowSorter;
 
-/**
- * Hộp thoại giới thiệu đề tài và danh sách 9 thành viên của nhóm.
- * Phụ trách: Nguyễn Lê An - MSSV: N24DCAT001 (Thành viên 8)
- */
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 public class AboutDialog extends JDialog {
-
-    public AboutDialog(Frame owner) {
-        super(owner, "Giới thiệu Hệ thống & Danh sách Thành viên", true);
-        initComponents();
-        setSize(720, 420);
-        setLocationRelativeTo(owner);
-    }
-
-    private void initComponents() {
+    public AboutDialog(JFrame parent) {
+        super(parent, "Thông tin Nhóm8HotelBooking", true);
+        setSize(620, 440);
+        setLocationRelativeTo(parent);
         setLayout(new BorderLayout(10, 10));
 
-        JLabel lblHeader = new JLabel(
-                "<html><center><h2>HỆ THỐNG QUẢN LÝ ĐẶT PHÒNG KHÁCH SẠN (HOTEL BOOKING)</h2>"
-                        + "Học phần: INT1332 – Lập trình Hướng đối tượng (PTIT)</center></html>",
-                SwingConstants.CENTER);
-        lblHeader.setBorder(BorderFactory.createEmptyBorder(10, 10, 4, 10));
-        lblHeader.setForeground(new Color(25, 85, 145));
+        JTextArea txt = new JTextArea(
+                "HỌC VIỆN CÔNG NGHỆ BƯU CHÍNH VIỄN THÔNG (PTIT)\n" +
+                "Môn học: INT1332 - Lập trình Hướng đối tượng\n" +
+                "Đơn vị: CÔNG TY TNHH NHÓM8HOTELBOOKING\n\n" +
+                "PHÂN CÔNG NHIỆM VỤ 9 THÀNH VIÊN:\n" +
+                "1. Thành viên 1 (Nhóm trưởng): HotelBookingApp, BaseWindow, MainWindow\n" +
+                "2. Thành viên 2: Room (abstract + cờ dọn phòng), RoomStatus, StandardRoom, DeluxeRoom, SuiteRoom\n" +
+                "3. Thành viên 3: Guest (có Giới tính), Booking (nhiều khách), RoomNotAvailableException\n" +
+                "4. Thành viên 4: PricingPolicy (Strategy BONUS), ServiceCharge, Invoice\n" +
+                "5. Thành viên 5: HotelRepository, InMemoryHotelRepository, BookingService (Thêm Phòng/Tầng)\n" +
+                "6. Thành viên 6: RoomMapPanel (Sơ đồ 2D co giãn động), RoomDetailPanel (Yêu cầu dọn phòng)\n" +
+                "7. Thành viên 7: BookingDialog (Nhiều khách + Giới tính), AddRoomFloorDialog, BookingTableModel\n" +
+                "8. Thành viên 8: InvoiceDialog, InvoicePaperPanel (Mộc đỏ & Hình ảnh DV), RoomFilterDialog\n" +
+                "9. Thành viên 9: ChartWindow, BarChartPanel, LineChartPanel (Biểu đồ Công suất & Doanh thu)\n"
+        );
+        txt.setEditable(false);
+        txt.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        txt.setBorder(new EmptyBorder(12, 16, 12, 16));
 
-        String[] columns = {"STT", "Họ và tên", "MSSV", "Vai trò / Phân hệ phụ trách", "Tỷ lệ"};
-        Object[][] data = {
-                {"1", "Hoàng Thị Huyền Trang", "N24DCCN083", "Nhóm trưởng & Khung hệ thống (BaseWindow, MainWindow)", "12%"},
-                {"2", "Lê Phạm Hoàng Kha", "N24DCCN036", "Model Phòng & Kế thừa (Room, Standard, Deluxe, Suite)", "11%"},
-                {"3", "Trần Trí Nguyên", "N24DCAT053", "Model Khách, Booking & Ngoại lệ (Guest, Booking, Exception)", "11%"},
-                {"4", "Nguyễn Minh Tuấn", "N24DCAT085", "Chiến lược Giá (Strategy Pattern) & Hóa đơn (Invoice)", "11%"},
-                {"5", "Lê Hoàng Nam", "N24DCAT050", "Kho dữ liệu & Nghiệp vụ Đặt phòng (Repository, Service, CSV)", "11%"},
-                {"6", "Hồ Hoài Sang", "N24DCCN159", "Đồ họa 2D Sơ đồ phòng & Dọn phòng (RoomMapPanel)", "11%"},
-                {"7", "Nguyễn Văn Giác", "N24DCAT021", "Hộp thoại Đặt phòng, Mở rộng & Bảng (BookingDialog)", "11%"},
-                {"8", "Nguyễn Lê An", "N24DCAT001", "Hóa đơn Đỏ, Hình ảnh DV & Lọc phòng (InvoiceDialog, Filter)", "11%"},
-                {"9", "Lâm Sỹ Nguyên", "N24DCAT052", "Biểu đồ Thống kê & Kiểm thử (ChartWindow, Bar/LineChart)", "11%"}
-        };
+        JButton btn = new JButton("Đóng");
+        btn.addActionListener(e -> dispose());
+        JPanel p = new JPanel(); p.add(btn);
 
-        DefaultTableModel model = new DefaultTableModel(data, columns) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-
-        JTable table = new JTable(model);
-        table.setRowHeight(26);
-        table.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
-
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton btnClose = new JButton("Đóng");
-        btnClose.addActionListener(e -> dispose());
-        bottom.add(btnClose);
-
-        add(lblHeader, BorderLayout.NORTH);
-        add(new JScrollPane(table), BorderLayout.CENTER);
-        add(bottom, BorderLayout.SOUTH);
+        add(new JScrollPane(txt), BorderLayout.CENTER);
+        add(p, BorderLayout.SOUTH);
     }
 }
