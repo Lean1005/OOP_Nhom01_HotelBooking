@@ -54,7 +54,7 @@ public class InvoiceDialog extends JDialog {
     private boolean paid = false;
 
     public InvoiceDialog(JFrame parent, Booking booking, BookingService service) {
-        super(parent, "Check-out & Hóa đơn Đỏ - Phòng " + booking.getRoom().getRoomNumber() + " | Nhóm8HotelBooking", true);
+        super(parent, "Check-out & Hóa đơn Đỏ - Phòng " + booking.getRoom().getRoomNumber() + " | Nhóm 1 Hotel Booking", true);
         this.booking = booking;
         this.service = service;
         setSize(760, 750);
@@ -87,7 +87,7 @@ public class InvoiceDialog extends JDialog {
         invoicePaperPanel = new InvoicePaperPanel();
         JScrollPane scrollPane = new JScrollPane(invoicePaperPanel);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Bản xem trước Hóa đơn Giá trị Gia tăng (Có đóng dấu mộc đỏ Nhóm8HotelBooking)"));
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Bản xem trước Hóa đơn Giá trị Gia tăng (Có đóng dấu mộc đỏ Nhóm 1 Hotel Booking)"));
 
         JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 6));
         JButton btnExportPng = new JButton("Xuất ảnh Hóa đơn (.PNG)");
@@ -140,7 +140,7 @@ public class InvoiceDialog extends JDialog {
 
     private void exportInvoiceImage() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setSelectedFile(new File("HoaDon_Nhom8HotelBooking_" + booking.getBookingId() + ".png"));
+        chooser.setSelectedFile(new File("HoaDon_Nhom1HotelBooking_" + booking.getBookingId() + ".png"));
         if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
                 BufferedImage img = new BufferedImage(
