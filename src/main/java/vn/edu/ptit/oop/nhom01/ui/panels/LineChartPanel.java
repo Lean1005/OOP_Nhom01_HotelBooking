@@ -70,6 +70,23 @@ public class LineChartPanel extends JPanel {
     }
 
   
+    public void updateRevenueData(java.util.Map<LocalDate, Double> revenueMap) {
+        if (revenueMap == null || revenueMap.isEmpty()) {
+            refreshRevenueData();
+            return;
+        }
+        dataset.clear();
+        LocalDate today = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM");
+        for (int i = 13; i >= 0; i--) {
+            LocalDate date = today.minusDays(i);
+            String dateLabel = date.format(formatter);
+            double val = revenueMap.getOrDefault(date, 0.0);
+            double amountInMillions = val / 1_000_000.0;
+            dataset.addValue(Math.round(amountInMillions * 10.0) / 10.0, "Doanh thu", dateLabel);
+        }
+    }
+
     public void refreshRevenueData() {
         dataset.clear();
         LocalDate today = LocalDate.now();
