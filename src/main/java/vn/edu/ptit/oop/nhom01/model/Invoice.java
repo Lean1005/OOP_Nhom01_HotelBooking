@@ -1,84 +1,74 @@
-// Author: Nguyen Minh Tuan - MSSV: N24DCAT085
 package vn.edu.ptit.oop.nhom08.model;
 
-import vn.edu.ptit.oop.nhom08.service.PricingPolicy;
-import vn.edu.ptit.oop.nhom08.service.StandardPricing;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class Invoice {
-    private String invoiceId;
-    private Booking booking;
-    private PricingPolicy pricingPolicy;
-    private List<ServiceCharge> serviceCharges;
-    private LocalDateTime issuedAt;
+    public static final String COMPANY_NAME = "NHÓM8HOTELBOOKING";
+    private final Booking booking;
+    private final PricingPolicy appliedPolicy;
+    private final List<ServiceCharge> serviceCharges = new ArrayList<>();
+    private final LocalDateTime issuedAt = LocalDateTime.now();
 
-    public Invoice(String invoiceId, Booking booking) {
-        this.invoiceId = invoiceId;
+    public Invoice(Booking booking, PricingPolicy appliedPolicy) {
         this.booking = booking;
-        this.pricingPolicy = new StandardPricing(); // Mặc định là giá ngày thường
-        this.serviceCharges = new ArrayList<>();
-        this.issuedAt = LocalDateTime.now();
-    }
-
-    public Invoice(String invoiceId, Booking booking, PricingPolicy pricingPolicy) {
-        this.invoiceId = invoiceId;
-        this.booking = booking;
-        this.pricingPolicy = (pricingPolicy != null) ? pricingPolicy : new StandardPricing();
-        this.serviceCharges = new ArrayList<>();
-        this.issuedAt = LocalDateTime.now();
+        this.appliedPolicy = appliedPolicy;
     }
 
     public void addServiceCharge(ServiceCharge charge) {
-        if (charge != null) {
-            this.serviceCharges.add(charge);
-        }
-    }
-
-    public double calculateRoomTotal() {
-        if (booking == null || booking.getRoom() == null) {
-            return 0.0;
-        }
-        double basePrice = booking.getRoom().getPricePerNight();
-        long nights = booking.nights();
-        return pricingPolicy.calculateRoomTotal(basePrice, nights);
-    }
-
-    public double calculateServicesTotal() {
-        double sum = 0.0;
-        for (ServiceCharge sc : serviceCharges) {
-            sum += sc.getAmount();
-        }
-        return sum;
-    }
-
-    public double calculateGrandTotal() {
-        return calculateRoomTotal() + calculateServicesTotal();
-    }
-
-    public String getInvoiceId() {
-        return invoiceId;
-    }
-
-    public Booking getBooking() {
-        return booking;
-    }
-
-    public PricingPolicy getPricingPolicy() {
-        return pricingPolicy;
-    }
-
-    public void setPricingPolicy(PricingPolicy pricingPolicy) {
-        this.pricingPolicy = pricingPolicy;
+        if (charge != null) serviceCharges.add(charge);
     }
 
     public List<ServiceCharge> getServiceCharges() {
         return Collections.unmodifiableList(serviceCharges);
     }
 
-    public LocalDateTime getIssuedAt() {
-        return issuedAt;
+    public Booking getBooking() { return booking; }
+    public PricingPolicy getAppliedPolicy() { return appliedPolicy; }
+    public LocalDateTime getIssuedAt() { return issuedAt; }
+    public double getRoomCharge() { return booking.totalCost(appliedPolicy); }
+    public double getTotalServiceCharges() {
+        return serviceCharges.stream().mapToDouble(ServiceCharge::getAmount).sum();
     }
+    public double getGrandTotal() { return getRoomCharge() + getTotalServiceCharges(); }
 }
