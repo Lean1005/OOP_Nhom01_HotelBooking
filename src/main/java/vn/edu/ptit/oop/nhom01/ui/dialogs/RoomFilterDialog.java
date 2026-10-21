@@ -1,144 +1,107 @@
 package vn.edu.ptit.oop.nhom08.ui.dialogs;
 
-import vn.edu.ptit.oop.nhom08.model.DeluxeRoom;
-import vn.edu.ptit.oop.nhom08.model.Room;
-import vn.edu.ptit.oop.nhom08.model.RoomStatus;
-import vn.edu.ptit.oop.nhom08.model.StandardRoom;
-import vn.edu.ptit.oop.nhom08.model.SuiteRoom;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JDialog;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.Frame;
-import java.awt.GridLayout;
+import javax.swing.table.TableRowSorter;
+
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.NumberFormat;
-import java.util.ArrayList;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.List;
-import java.util.Locale;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-/**
- * Hộp thoại tra cứu và lọc danh sách phòng theo Hạng phòng, Trạng thái và Yêu cầu dọn phòng.
- * Phụ trách: Nguyễn Lê An - MSSV: N24DCAT001 (Thành viên 8)
- */
 public class RoomFilterDialog extends JDialog {
-
     private final List<Room> allRooms;
-    private Room selectedRoom = null;
+    private final JComboBox<String> cboType = new JComboBox<>(new String[]{"Tất cả", "Standard", "Deluxe", "Suite"});
+    private final JComboBox<String> cboStatus = new JComboBox<>(new String[]{"Tất cả", "Trống", "Đang có khách", "Bảo trì", "Cần dọn phòng"});
+    private final DefaultTableModel model;
+    private List<Room> currentList;
 
-    private JComboBox<String> cboType;
-    private JComboBox<String> cboStatus;
-    private JComboBox<String> cboCleaning;
-    private DefaultTableModel tableModel;
-    private JTable resultTable;
-    private final List<Room> filteredRooms = new ArrayList<>();
+    public RoomFilterDialog(JFrame parent, List<Room> allRooms, Consumer<Room> onPick) {
+        super(parent, "Tra cứu & Lọc Phòng", true);
+        this.allRooms = allRooms;
+        setSize(680, 420);
+        setLocationRelativeTo(parent);
+        setLayout(new BorderLayout(8, 8));
 
-    public RoomFilterDialog(Frame owner, List<Room> rooms) {
-        super(owner, "Lọc & Tra cứu Phòng nâng cao", true);
-        this.allRooms = rooms != null ? rooms : new ArrayList<>();
-        initComponents();
-        applyFilter();
-        setSize(680, 440);
-        setLocationRelativeTo(owner);
-    }
+        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        top.add(new JLabel("Hạng phòng:")); top.add(cboType);
+        top.add(new JLabel("Trạng thái:")); top.add(cboStatus);
+        cboType.addActionListener(e -> filter());
+        cboStatus.addActionListener(e -> filter());
 
-    private void initComponents() {
-        setLayout(new BorderLayout(10, 10));
+        model = new DefaultTableModel(new String[]{"Số Phòng", "Tầng", "Hạng Phòng", "Giá/Đêm", "Trạng Thái", "Dọn phòng"}, 0);
+        JTable table = new JTable(model);
+        table.setRowHeight(24);
 
-        JPanel filterBar = new JPanel(new GridLayout(1, 6, 8, 8));
-        filterBar.setBorder(BorderFactory.createTitledBorder("Tiêu chí lọc phòng"));
-
-        cboType = new JComboBox<>(new String[]{"Tất cả hạng", "Standard", "Deluxe", "Suite"});
-        cboStatus = new JComboBox<>(new String[]{"Tất cả trạng thái", "Trống (AVAILABLE)", "Đang ở (OCCUPIED)", "Bảo trì (MAINTENANCE)"});
-        cboCleaning = new JComboBox<>(new String[]{"Tất cả dọn phòng", "Cần dọn phòng", "Đã dọn sạch"});
-
-        cboType.addActionListener(e -> applyFilter());
-        cboStatus.addActionListener(e -> applyFilter());
-        cboCleaning.addActionListener(e -> applyFilter());
-
-        filterBar.add(new JLabel("Hạng phòng:"));
-        filterBar.add(cboType);
-        filterBar.add(new JLabel("Trạng thái:"));
-        filterBar.add(cboStatus);
-        filterBar.add(new JLabel("Dọn phòng:"));
-        filterBar.add(cboCleaning);
-
-        String[] cols = {"Số phòng", "Tầng", "Hạng phòng", "Trạng thái", "Giá/Đêm (VNĐ)", "Dọn phòng"};
-        tableModel = new DefaultTableModel(cols, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        resultTable = new JTable(tableModel);
-        resultTable.setRowHeight(24);
-
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton btnSelect = new JButton("Chọn phòng này");
-        JButton btnClose = new JButton("Đóng");
-
+        JButton btnSelect = new JButton("Chọn phòng này trên Sơ đồ");
         btnSelect.addActionListener(e -> {
-            int row = resultTable.getSelectedRow();
-            if (row >= 0 && row < filteredRooms.size()) {
-                selectedRoom = filteredRooms.get(row);
+            int r = table.getSelectedRow();
+            if (r >= 0 && r < currentList.size()) {
+                onPick.accept(currentList.get(r));
                 dispose();
             }
         });
-        btnClose.addActionListener(e -> dispose());
+        JPanel south = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        south.add(btnSelect);
 
-        bottomPanel.add(btnSelect);
-        bottomPanel.add(btnClose);
-
-        add(filterBar, BorderLayout.NORTH);
-        add(new JScrollPane(resultTable), BorderLayout.CENTER);
-        add(bottomPanel, BorderLayout.SOUTH);
+        add(top, BorderLayout.NORTH);
+        add(new JScrollPane(table), BorderLayout.CENTER);
+        add(south, BorderLayout.SOUTH);
+        filter();
     }
 
-    private void applyFilter() {
-        tableModel.setRowCount(0);
-        filteredRooms.clear();
-        NumberFormat nf = NumberFormat.getInstance(Locale.forLanguageTag("vi-VN"));
-
-        int typeIdx = cboType.getSelectedIndex();
-        int statusIdx = cboStatus.getSelectedIndex();
-        int cleanIdx = cboCleaning.getSelectedIndex();
-
-        for (Room r : allRooms) {
-            if (typeIdx == 1 && !(r instanceof StandardRoom)) continue;
-            if (typeIdx == 2 && !(r instanceof DeluxeRoom)) continue;
-            if (typeIdx == 3 && !(r instanceof SuiteRoom)) continue;
-
-            if (statusIdx == 1 && r.getStatus() != RoomStatus.AVAILABLE) continue;
-            if (statusIdx == 2 && r.getStatus() != RoomStatus.OCCUPIED) continue;
-            if (statusIdx == 3 && r.getStatus() != RoomStatus.MAINTENANCE) continue;
-
-            if (cleanIdx == 1 && !r.isCleaningRequested()) continue;
-            if (cleanIdx == 2 && r.isCleaningRequested()) continue;
-
-            filteredRooms.add(r);
-            tableModel.addRow(new Object[]{
-                    r.getRoomNumber(),
-                    "Tầng " + r.getFloor(),
-                    r.getRoomTypeName(),
-                    r.getStatus().getDisplayName(),
-                    nf.format(Math.round(r.getPricePerNight())),
-                    r.isCleaningRequested() ? "CẦN DỌN PHÒNG" : "Bình thường"
+    private void filter() {
+        String t = (String) cboType.getSelectedItem();
+        String s = (String) cboStatus.getSelectedItem();
+        currentList = allRooms.stream()
+                .filter(r -> "Tất cả".equals(t) || r.getRoomTypeName().equalsIgnoreCase(t))
+                .filter(r -> {
+                    if ("Cần dọn phòng".equals(s)) return r.isCleaningRequested();
+                    return "Tất cả".equals(s) || r.getStatus().getDisplayName().equalsIgnoreCase(s);
+                })
+                .collect(Collectors.toList());
+        model.setRowCount(0);
+        NumberFormat vnd = NumberFormat.getNumberInstance(HotelBookingApp.VI_LOCALE);
+        for (Room r : currentList) {
+            model.addRow(new Object[]{
+                    r.getRoomNumber(), "Tầng " + r.getFloor(), r.getRoomTypeName(),
+                    vnd.format(r.getPricePerNight()) + " đ", r.getStatus().getDisplayName(),
+                    r.isCleaningRequested() ? "Đang yêu cầu dọn" : "Đã sạch"
             });
         }
-    }
-
-    public Room getSelectedRoom() {
-        return selectedRoom;
-    }
-
-    public List<Room> getFilteredRooms() {
-        return new ArrayList<>(filteredRooms);
     }
 }
