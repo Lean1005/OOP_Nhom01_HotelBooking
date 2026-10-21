@@ -1,4 +1,3 @@
-// Phụ trách: Nguyễn Văn Giác - N24DCAT021
 package vn.edu.ptit.oop.nhom08.ui;
 
 import javax.swing.table.AbstractTableModel;
