@@ -1,212 +1,162 @@
 package vn.edu.ptit.oop.nhom08.ui.dialogs;
 
-import vn.edu.ptit.oop.nhom08.model.Booking;
-import vn.edu.ptit.oop.nhom08.model.Invoice;
-import vn.edu.ptit.oop.nhom08.model.ServiceCharge;
-import vn.edu.ptit.oop.nhom08.model.ServiceType;
-import vn.edu.ptit.oop.nhom08.service.BookingService;
-import vn.edu.ptit.oop.nhom08.service.PricingPolicy;
-import vn.edu.ptit.oop.nhom08.service.StandardPricing;
-import vn.edu.ptit.oop.nhom08.ui.panels.InvoicePaperPanel;
-
 import javax.imageio.ImageIO;
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JDialog;
-import javax.swing.JFileChooser;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSpinner;
-import javax.swing.SpinnerNumberModel;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Frame;
-import java.awt.Graphics2D;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+
+import vn.edu.ptit.oop.nhom08.*;
+import vn.edu.ptit.oop.nhom08.common.*;
+import vn.edu.ptit.oop.nhom08.exception.*;
+import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom08.repository.*;
+import vn.edu.ptit.oop.nhom08.service.*;
+import vn.edu.ptit.oop.nhom08.ui.*;
+import vn.edu.ptit.oop.nhom08.ui.dialogs.*;
+import vn.edu.ptit.oop.nhom08.ui.panels.*;
+import vn.edu.ptit.oop.nhom08.util.*;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.EnumMap;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-/**
- * Hộp thoại Check-out trả phòng, tích chọn phụ phí dịch vụ và xuất hóa đơn đỏ (.PNG).
- * Phụ trách: Nguyễn Lê An - MSSV: N24DCAT001 (Thành viên 8)
- */
 public class InvoiceDialog extends JDialog {
-
     private final Booking booking;
-    private final BookingService bookingService;
-    private final PricingPolicy pricingPolicy;
-    private Invoice invoice;
-    private boolean confirmed = false;
-
+    private final BookingService service;
+    private final JCheckBox chkMinibar;
+    private final JCheckBox chkLaundry;
+    private final JCheckBox chkBreakfast;
+    private final JCheckBox chkSpa;
     private final InvoicePaperPanel invoicePaperPanel;
-    private final Map<ServiceType, JCheckBox> serviceCheckBoxes = new EnumMap<>(ServiceType.class);
-    private final Map<ServiceType, JSpinner> quantitySpinners = new EnumMap<>(ServiceType.class);
+    private boolean paid = false;
 
-    public InvoiceDialog(Frame owner, Booking booking, BookingService bookingService, PricingPolicy pricingPolicy) {
-        super(owner, "Check-out & Xuất Hóa đơn GTGT - Phòng "
-                + (booking != null && booking.getRoom() != null ? booking.getRoom().getRoomNumber() : ""), true);
+    public InvoiceDialog(JFrame parent, Booking booking, BookingService service) {
+        super(parent, "Check-out & Hóa đơn Đỏ - Phòng " + booking.getRoom().getRoomNumber() + " | Nhóm8HotelBooking", true);
         this.booking = booking;
-        this.bookingService = bookingService;
-        this.pricingPolicy = pricingPolicy != null ? pricingPolicy : new StandardPricing();
+        this.service = service;
+        setSize(760, 750);
+        setLocationRelativeTo(parent);
+        setLayout(new BorderLayout(8, 8));
 
-        this.invoice = new Invoice("INV-" + System.currentTimeMillis() % 100000, this.booking, this.pricingPolicy);
-        this.invoicePaperPanel = new InvoicePaperPanel(this.invoice);
+        chkMinibar = new JCheckBox("Minibar (Đồ uống & Snack) - 150.000đ");
+        chkLaundry = new JCheckBox("Giặt ủi cao cấp - 120.000đ");
+        chkBreakfast = new JCheckBox("Buffet Sáng phụ thêm - 200.000đ");
+        chkSpa = new JCheckBox("Dịch vụ Spa & Xông hơi - 350.000đ");
 
-        initComponents();
-        rebuildInvoicePreview();
-        pack();
-        setLocationRelativeTo(owner);
-    }
+        Font chkFont = new Font("Segoe UI", Font.BOLD, 12);
+        chkMinibar.setFont(chkFont);
+        chkLaundry.setFont(chkFont);
+        chkBreakfast.setFont(chkFont);
+        chkSpa.setFont(chkFont);
 
-    public InvoiceDialog(Frame owner, Booking booking, PricingPolicy pricingPolicy) {
-        this(owner, booking, null, pricingPolicy);
-    }
+        JPanel checks = new JPanel(new GridLayout(2, 2, 12, 8));
+        checks.setBorder(BorderFactory.createTitledBorder("Chọn phụ phí dịch vụ phát sinh (Tích chọn để in Hình ảnh Dịch vụ lên Hóa đơn)"));
+        ActionListener al = e -> refreshPreview();
+        chkMinibar.addActionListener(al);
+        chkLaundry.addActionListener(al);
+        chkBreakfast.addActionListener(al);
+        chkSpa.addActionListener(al);
+        checks.add(chkMinibar);
+        checks.add(chkLaundry);
+        checks.add(chkBreakfast);
+        checks.add(chkSpa);
 
-    private void initComponents() {
-        setLayout(new BorderLayout(12, 12));
+        invoicePaperPanel = new InvoicePaperPanel();
+        JScrollPane scrollPane = new JScrollPane(invoicePaperPanel);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Bản xem trước Hóa đơn Giá trị Gia tăng (Có đóng dấu mộc đỏ Nhóm8HotelBooking)"));
 
-        // Panel bên trái: Chọn phụ phí dịch vụ (Minibar, Giặt ủi, Buffet Sáng, Spa)
-        JPanel servicePanel = new JPanel(new GridBagLayout());
-        servicePanel.setBorder(BorderFactory.createTitledBorder("Chọn Phụ phí Dịch vụ phát sinh"));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 8, 6, 8);
-        gbc.anchor = GridBagConstraints.WEST;
-
-        NumberFormat nf = NumberFormat.getInstance(Locale.forLanguageTag("vi-VN"));
-        int row = 0;
-        for (ServiceType type : ServiceType.values()) {
-            JCheckBox cb = new JCheckBox(type.getDisplayName()
-                    + " (" + nf.format(Math.round(type.getDefaultUnitPrice())) + "đ)");
-            cb.setFont(new Font("SansSerif", Font.PLAIN, 13));
-
-            JSpinner spQty = new JSpinner(new SpinnerNumberModel(1, 1, 20, 1));
-            spQty.setEnabled(false);
-
-            cb.addActionListener(e -> {
-                spQty.setEnabled(cb.isSelected());
-                rebuildInvoicePreview();
-            });
-            spQty.addChangeListener(e -> rebuildInvoicePreview());
-
-            serviceCheckBoxes.put(type, cb);
-            quantitySpinners.put(type, spQty);
-
-            gbc.gridx = 0;
-            gbc.gridy = row;
-            servicePanel.add(cb, gbc);
-
-            gbc.gridx = 1;
-            servicePanel.add(new JLabel("SL:"), gbc);
-
-            gbc.gridx = 2;
-            servicePanel.add(spQty, gbc);
-            row++;
-        }
-
-        // Panel bên phải: Tờ hóa đơn trực quan
-        JScrollPane previewScroll = new JScrollPane(invoicePaperPanel);
-        previewScroll.setBorder(BorderFactory.createTitledBorder("Xem trước Hóa đơn Đỏ (GTGT)"));
-
-        // Panel nút bấm phía dưới
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 6));
         JButton btnExportPng = new JButton("Xuất ảnh Hóa đơn (.PNG)");
-        JButton btnConfirm = new JButton("Xác nhận Check-out & Thu tiền");
-        JButton btnCancel = new JButton("Đóng");
+        JButton btnPay = new JButton("Xác nhận Thanh toán & Check-out");
+        btnPay.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnPay.setForeground(new Color(180, 20, 20));
+        JButton btnClose = new JButton("Đóng");
 
-        btnConfirm.setBackground(new Color(40, 167, 69));
-        btnConfirm.setForeground(Color.WHITE);
-        btnConfirm.setFont(new Font("SansSerif", Font.BOLD, 12));
+        btnExportPng.addActionListener(e -> exportInvoiceImage());
+        btnPay.addActionListener(e -> {
+            service.checkOut(booking, collectCharges());
+            paid = true;
+            JOptionPane.showMessageDialog(this,
+                    "Thanh toán & Đóng dấu hóa đơn thành công!\nPhòng " + booking.getRoom().getRoomNumber()
+                            + " đã chuyển về trạng thái Trống và bật cờ Cần dọn phòng.",
+                    "Hoàn tất Check-out", JOptionPane.INFORMATION_MESSAGE);
+            dispose();
+        });
+        btnClose.addActionListener(e -> dispose());
 
-        btnExportPng.addActionListener(e -> exportInvoiceToPng());
-        btnConfirm.addActionListener(e -> onConfirmCheckOut());
-        btnCancel.addActionListener(e -> dispose());
+        btns.add(btnExportPng);
+        btns.add(btnPay);
+        btns.add(btnClose);
 
-        buttonPanel.add(btnExportPng);
-        buttonPanel.add(btnConfirm);
-        buttonPanel.add(btnCancel);
+        add(checks, BorderLayout.NORTH);
+        add(scrollPane, BorderLayout.CENTER);
+        add(btns, BorderLayout.SOUTH);
 
-        add(servicePanel, BorderLayout.WEST);
-        add(previewScroll, BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
+        refreshPreview();
     }
 
-    private void rebuildInvoicePreview() {
-        Invoice updated = new Invoice(invoice.getInvoiceId(), booking, pricingPolicy);
-        for (ServiceType type : ServiceType.values()) {
-            JCheckBox cb = serviceCheckBoxes.get(type);
-            JSpinner sp = quantitySpinners.get(type);
-            if (cb != null && cb.isSelected()) {
-                int qty = (Integer) sp.getValue();
-                updated.addServiceCharge(new ServiceCharge(type, qty));
-            }
-        }
-        this.invoice = updated;
-        this.invoicePaperPanel.setInvoice(updated);
+    private List<ServiceCharge> collectCharges() {
+        List<ServiceCharge> list = new ArrayList<>();
+        if (chkMinibar.isSelected())
+            list.add(new ServiceCharge("Minibar (Đồ uống & Snack)", 150_000, ServiceType.MINIBAR));
+        if (chkLaundry.isSelected())
+            list.add(new ServiceCharge("Giặt ủi cao cấp (24h)", 120_000, ServiceType.LAUNDRY));
+        if (chkBreakfast.isSelected())
+            list.add(new ServiceCharge("Buffet Sáng Á - Âu phụ thêm", 200_000, ServiceType.BREAKFAST));
+        if (chkSpa.isSelected())
+            list.add(new ServiceCharge("Dịch vụ Spa & Xông hơi thảo dược", 350_000, ServiceType.SPA));
+        return list;
     }
 
-    private void exportInvoiceToPng() {
+    private void refreshPreview() {
+        Invoice inv = new Invoice(booking, service.getPricingPolicy());
+        collectCharges().forEach(inv::addServiceCharge);
+        invoicePaperPanel.setInvoice(inv);
+    }
+
+    private void exportInvoiceImage() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Lưu ảnh Hóa đơn (.PNG)");
-        chooser.setSelectedFile(new File("HoaDon_" + booking.getBookingId() + ".png"));
+        chooser.setSelectedFile(new File("HoaDon_Nhom8HotelBooking_" + booking.getBookingId() + ".png"));
         if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            File file = chooser.getSelectedFile();
-            if (!file.getName().toLowerCase().endsWith(".png")) {
-                file = new File(file.getAbsolutePath() + ".png");
-            }
             try {
-                int w = Math.max(invoicePaperPanel.getWidth(), 540);
-                int h = Math.max(invoicePaperPanel.getHeight(), 680);
-                invoicePaperPanel.setSize(w, h);
-                BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+                BufferedImage img = new BufferedImage(
+                        invoicePaperPanel.getWidth(),
+                        invoicePaperPanel.getHeight(),
+                        BufferedImage.TYPE_INT_RGB);
                 Graphics2D g2 = img.createGraphics();
                 invoicePaperPanel.paint(g2);
                 g2.dispose();
-                ImageIO.write(img, "png", file);
-                JOptionPane.showMessageDialog(this,
-                        "Đã xuất hóa đơn thành công:\n" + file.getAbsolutePath(),
-                        "Xuất ảnh PNG", JOptionPane.INFORMATION_MESSAGE);
+                ImageIO.write(img, "png", chooser.getSelectedFile());
+                JOptionPane.showMessageDialog(this, "Đã lưu ảnh Hóa đơn tại:\n" + chooser.getSelectedFile().getAbsolutePath());
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Lỗi khi lưu ảnh hóa đơn: " + ex.getMessage(),
-                        "Lỗi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Lỗi xuất ảnh: " + ex.getMessage());
             }
         }
     }
 
-    private void onConfirmCheckOut() {
-        rebuildInvoicePreview();
-        if (bookingService != null) {
-            bookingService.checkOut(booking.getBookingId(), getSelectedCharges(), pricingPolicy);
-        }
-        this.confirmed = true;
-        JOptionPane.showMessageDialog(this,
-                "Check-out thành công cho đơn " + booking.getBookingId() + "!",
-                "Hoàn tất thanh toán", JOptionPane.INFORMATION_MESSAGE);
-        dispose();
-    }
-
-    public List<ServiceCharge> getSelectedCharges() {
-        return new ArrayList<>(invoice.getServiceCharges());
-    }
-
-    public Invoice getInvoice() {
-        return invoice;
-    }
-
-    public boolean isConfirmed() {
-        return confirmed;
-    }
+    public boolean isPaid() { return paid; }
 }
