@@ -60,6 +60,18 @@ public class BarChartPanel extends JPanel {
         dataset.setValue(deluxe, "Công suất (%)", "Deluxe Room");
         dataset.setValue(suite, "Công suất (%)", "Suite Room");
     }
+
+    public void updateOccupancyData(java.util.Map<String, Double> rates) {
+        if (rates == null || rates.isEmpty()) {
+            simulateRandomData();
+            return;
+        }
+        dataset.clear();
+        for (java.util.Map.Entry<String, Double> entry : rates.entrySet()) {
+            dataset.setValue(Math.round(entry.getValue() * 10.0) / 10.0, "Công suất (%)", entry.getKey());
+        }
+    }
+
     public void simulateRandomData() {
         Random rand = new Random();
         double standard = 50 + rand.nextDouble() * 45; // 50% - 95%
