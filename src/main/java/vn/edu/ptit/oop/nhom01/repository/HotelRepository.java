@@ -1,10 +1,10 @@
-package vn.edu.ptit.oop.nhom08.repository;
+package vn.edu.ptit.oop.nhom01.repository;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom01.model.*;
 
 public interface HotelRepository {
     List<Room> findAllRooms();
