@@ -1,4 +1,4 @@
-package vn.edu.ptit.oop.nhom08.ui.dialogs;
+package vn.edu.ptit.oop.nhom01.ui.dialogs;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -12,7 +12,7 @@ import java.awt.Color;
 import java.awt.GridLayout;
 import java.awt.Font;
 
-import vn.edu.ptit.oop.nhom08.model.*;
+import vn.edu.ptit.oop.nhom01.model.*;
 import javax.swing.JToolBar;
 import javax.swing.JRadioButton;
 
