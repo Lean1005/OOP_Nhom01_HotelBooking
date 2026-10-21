@@ -1,4 +1,4 @@
-package vn.edu.ptit.oop.nhom08.ui;
+package vn.edu.ptit.oop.nhom01.ui;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
