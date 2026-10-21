@@ -1,13 +1,13 @@
-package vn.edu.ptit.oop.nhom08.repository;
+package vn.edu.ptit.oop.nhom01.repository;
 
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.*;
 
-import vn.edu.ptit.oop.nhom08.DBConnection;
-import vn.edu.ptit.oop.nhom08.exception.InvalidBookingDataException;
-import vn.edu.ptit.oop.nhom08.model.*;
-import vn.edu.ptit.oop.nhom08.service.StandardPricing;
+import vn.edu.ptit.oop.nhom01.DBConnection;
+import vn.edu.ptit.oop.nhom01.exception.InvalidBookingDataException;
+import vn.edu.ptit.oop.nhom01.model.*;
+import vn.edu.ptit.oop.nhom01.service.StandardPricing;
 
 public class InMemoryHotelRepository implements HotelRepository {
     // Giữ nguyên tên class để không phải sửa nơi khởi tạo repository trong giao diện.
