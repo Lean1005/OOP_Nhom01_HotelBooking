@@ -1,4 +1,4 @@
-package vn.edu.ptit.oop.nhom08;
+package vn.edu.ptit.oop.nhom01;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
