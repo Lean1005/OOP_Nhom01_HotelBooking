@@ -30,7 +30,7 @@ public class MainWindow extends BaseWindow {
     private UserService userService;
 
     public MainWindow(User currentUser, UserService userService) {
-        super("Nhóm8HotelBooking - Hệ thống Quản lý Đặt phòng Khách sạn [Nhân viên: " + currentUser.getFullName() + "]", 1280, 780);
+        super("Nhóm1HotelBooking - Hệ thống Quản lý Đặt phòng Khách sạn [Nhân viên: " + currentUser.getFullName() + "]", 1280, 780);
         statusBar.setBounds(0, 699, 1266, 22);
         toolBar.setBounds(0, 0, 1266, 21);
         this.currentUser = currentUser;
