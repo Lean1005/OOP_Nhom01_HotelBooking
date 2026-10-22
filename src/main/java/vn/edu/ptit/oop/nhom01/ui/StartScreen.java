@@ -19,17 +19,7 @@ public class StartScreen extends JFrame {
         setLocationRelativeTo(null);
         getContentPane().setLayout(new BorderLayout());
 
-        JPanel panel = new JPanel() {
-        	@Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                java.net.URL imgUrl = getClass().getResource("/image/Screenshot 2026-10-20 003409.png");
-                if (imgUrl != null) {
-                    ImageIcon imageIcon = new ImageIcon(imgUrl);
-                    g.drawImage(imageIcon.getImage(), 0, 0, getWidth(), getHeight(), this);
-                }
-            }
-        };
+        JPanel panel = new JPanel() {};
         panel.setBorder(new EmptyBorder(30, 40, 30, 40));
         panel.setBackground(new Color(245, 247, 250));
 
